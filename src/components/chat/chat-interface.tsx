@@ -2,20 +2,29 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, GitFork, ChevronDown } from 'lucide-react';
+import { Pencil, GitFork, ChevronDown, Archive, ArchiveRestore, Trash2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import { useChat, useUpdateChat, useForkChat } from '@/hooks/use-chats';
+import { useChat, useUpdateChat, useForkChat, useArchiveChat, useDeleteChat } from '@/hooks/use-chats';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useSettings } from '@/hooks/use-settings';
 import { ANTHROPIC_MODELS } from '@/types';
@@ -30,6 +39,8 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
   const { data: settings, updateSettings } = useSettings();
   const updateChat = useUpdateChat();
   const forkChat = useForkChat();
+  const archiveChat = useArchiveChat();
+  const deleteChat = useDeleteChat();
   const { sendMessage, isStreaming, streamingMessage, error } = useChatStream({
     chatId,
     onFinish: () => refetch(),
@@ -37,6 +48,7 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleStartEdit = () => {
     setEditTitle(chat?.title ?? '');
@@ -63,6 +75,28 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
 
   const handleSendMessage = (content: string) => {
     sendMessage(content);
+  };
+
+  const handleArchive = () => {
+    archiveChat.mutate(
+      { id: chatId, archived: !chat?.archived },
+      {
+        onSuccess: () => {
+          if (!chat?.archived) {
+            router.push('/chat');
+          }
+        },
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    deleteChat.mutate(chatId, {
+      onSuccess: () => {
+        router.push('/chat');
+      },
+    });
+    setShowDeleteDialog(false);
   };
 
   const selectedModel = ANTHROPIC_MODELS.find((m) => m.id === settings?.selectedModel);
@@ -125,6 +159,42 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
               </TooltipTrigger>
               <TooltipContent>Fork chat</TooltipContent>
             </Tooltip>
+
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>More options</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handleArchive}>
+                  {chat.archived ? (
+                    <>
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                      Unarchive
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <DropdownMenu>
@@ -170,6 +240,27 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
         {/* Input */}
         <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
       </div>
+
+      {/* Delete Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Chat</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{chat.title}&quot;? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteChat.isPending}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
