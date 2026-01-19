@@ -10,11 +10,77 @@ datasource db {
   provider = "sqlite"
 }
 
-// Example model - replace with your own
-model User {
+model Folder {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  name      String
+  parentId  String?
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[] @relation("FolderTree")
+  chats     Chat[]
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  title     String
+  folderId  String?
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String   // 'user' | 'assistant' | 'system' | 'tool'
+  content   String   // Text content or JSON for tool results
+  toolCalls Json?    // Array of tool calls made by assistant
+  toolName  String?  // For tool role messages, which tool produced this
+  createdAt DateTime @default(now())
+}
+
+model Connector {
+  id          String       @id @default(cuid())
+  type        String       // 'aws' | 'github' | 'jira' | 'confluence' | 'jenkins' | 'outlook'
+  name        String       // User-friendly name
+  config      String       // Encrypted JSON blob
+  enabled     Boolean      @default(true)
+  lastHealthy DateTime?
+  cachedData  CachedData[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([type]) // One connector per type for v1
+}
+
+model CachedData {
+  id          String    @id @default(cuid())
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  cacheKey    String    // e.g., "jira:assigned_issues" or "github:open_prs"
+  data        String    // JSON blob
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([connectorId, cacheKey])
+  @@index([expiresAt])
+}
+
+model UserContext {
+  id        String   @id @default("singleton") // Single row
+  content   String   // Markdown document
+  updatedAt DateTime @updatedAt
+}
+
+model Settings {
+  id               String   @id @default("singleton")
+  selectedModel    String   @default("claude-sonnet-4-20250514")
+  systemPrompt     String   @default("")
+  sidebarCollapsed Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
 }
