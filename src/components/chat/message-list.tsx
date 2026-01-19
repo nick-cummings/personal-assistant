@@ -40,7 +40,7 @@ export function MessageList({ messages, streamingMessage }: MessageListProps) {
   }
 
   return (
-    <ScrollArea className="flex-1 px-4">
+    <ScrollArea className="flex-1 min-h-0 px-4">
       <div className="mx-auto max-w-3xl py-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
