@@ -109,18 +109,14 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
         onClick={handleClick}
       >
         <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
-        {isTruncated ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span ref={titleRef} className="flex-1 truncate">{chat.title}</span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="start" className="max-w-[300px]">
-              {chat.title}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <span ref={titleRef} className="flex-1 truncate">{chat.title}</span>
-        )}
+        <Tooltip open={isTruncated ? undefined : false}>
+          <TooltipTrigger asChild>
+            <span ref={titleRef} className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{chat.title}</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="start" className="max-w-[300px]">
+            {chat.title}
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
