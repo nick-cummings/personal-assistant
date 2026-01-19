@@ -15,7 +15,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import { useChat, useUpdateChat, useForkChat, useAddMessage } from '@/hooks/use-chats';
+import { useChat, useUpdateChat, useForkChat } from '@/hooks/use-chats';
+import { useChatStream } from '@/hooks/use-chat-stream';
 import { useSettings } from '@/hooks/use-settings';
 import { ANTHROPIC_MODELS } from '@/types';
 
@@ -25,11 +26,14 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ chatId }: ChatInterfaceProps) {
   const router = useRouter();
-  const { data: chat, isLoading } = useChat(chatId);
+  const { data: chat, isLoading, refetch } = useChat(chatId);
   const { data: settings, updateSettings } = useSettings();
   const updateChat = useUpdateChat();
   const forkChat = useForkChat();
-  const addMessage = useAddMessage();
+  const { sendMessage, isStreaming, streamingMessage, error } = useChatStream({
+    chatId,
+    onFinish: () => refetch(),
+  });
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -58,21 +62,7 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
   };
 
   const handleSendMessage = (content: string) => {
-    addMessage.mutate({
-      chatId,
-      role: 'user',
-      content,
-    });
-
-    // For now, just add a placeholder assistant response
-    // This will be replaced with actual AI streaming in Phase 2
-    setTimeout(() => {
-      addMessage.mutate({
-        chatId,
-        role: 'assistant',
-        content: 'This is a placeholder response. AI integration will be added in Phase 2.',
-      });
-    }, 500);
+    sendMessage(content);
   };
 
   const selectedModel = ANTHROPIC_MODELS.find((m) => m.id === settings?.selectedModel);
@@ -168,10 +158,17 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
         </div>
 
         {/* Messages */}
-        <MessageList messages={chat.messages} />
+        <MessageList messages={chat.messages} streamingMessage={streamingMessage} />
+
+        {/* Error display */}
+        {error && (
+          <div className="mx-4 mb-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         {/* Input */}
-        <ChatInput onSend={handleSendMessage} disabled={addMessage.isPending} />
+        <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
       </div>
     </TooltipProvider>
   );
