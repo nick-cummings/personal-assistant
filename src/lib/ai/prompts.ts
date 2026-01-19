@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
+import { getConnectorMetadata } from '@/lib/connectors';
+import type { ConnectorType } from '@/types';
 
-const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. You can query AWS, GitHub, Jira, Confluence, Jenkins, and Outlook to help answer questions about deployments, code, tasks, documentation, and communications.
+const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
 
 ## Guidelines
 
@@ -39,10 +41,14 @@ export async function buildSystemPrompt(): Promise<string> {
     parts.push(`\n## Additional Instructions\n\n${settings.systemPrompt}`);
   }
 
-  // Add enabled connectors list
+  // Add enabled connectors list with descriptions
   if (connectors.length > 0) {
-    const connectorList = connectors.map((c) => `- ${c.name} (${c.type})`).join('\n');
-    parts.push(`\n## Available Connectors\n\n${connectorList}`);
+    const connectorList = connectors.map((c) => {
+      const metadata = getConnectorMetadata(c.type as ConnectorType);
+      const description = metadata?.description || '';
+      return `- **${c.name}** (${c.type})${description ? ` — ${description}` : ''}`;
+    }).join('\n');
+    parts.push(`\n## Available Connectors\n\nYou have access to ${connectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`);
   } else {
     parts.push(
       '\n## Available Connectors\n\nNo connectors are currently configured. You can help the user with general questions, but cannot access external tools.'
