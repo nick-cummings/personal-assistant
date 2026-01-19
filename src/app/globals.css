@@ -123,3 +123,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Ensure cursor-pointer on all interactive elements */
+@layer components {
+  button,
+  [role="button"],
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  [tabindex]:not([tabindex="-1"]) {
+    @apply cursor-pointer;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    @apply cursor-text;
+  }
+
+  [disabled],
+  [aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
+}
