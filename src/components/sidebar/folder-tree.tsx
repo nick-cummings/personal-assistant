@@ -169,7 +169,7 @@ export function FolderTreeItem({ folder, level = 0 }: FolderTreeItemProps) {
             <FolderTreeItem key={child.id} folder={child} level={level + 1} />
           ))}
           {/* Chats in this folder */}
-          <div className="overflow-hidden" style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}>
+          <div style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}>
             {filteredChats.map((chat) => (
               <ChatListItem key={chat.id} chat={chat} isActive={chat.id === activeChatId} />
             ))}
@@ -267,14 +267,14 @@ export function FolderTree({ folders, unfiledChats = [] }: FolderTreeProps) {
   );
 
   return (
-    <div className="flex flex-col gap-1 overflow-hidden">
+    <div className="flex flex-col gap-1 w-full">
       {folders.map((folder) => (
         <FolderTreeItem key={folder.id} folder={folder} />
       ))}
 
       {/* Unfiled chats */}
       {filteredUnfiledChats.length > 0 && (
-        <div className="mt-2 px-2 overflow-hidden">
+        <div className="mt-2 px-2">
           {filteredUnfiledChats.map((chat) => (
             <ChatListItem key={chat.id} chat={chat as any} isActive={chat.id === activeChatId} />
           ))}

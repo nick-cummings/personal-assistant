@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,28 +42,6 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const titleRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const checkTruncation = () => {
-      const el = titleRef.current;
-      if (el) {
-        setIsTruncated(el.scrollWidth > el.clientWidth);
-      }
-    };
-
-    // Check after layout
-    checkTruncation();
-
-    // Also check on resize
-    const resizeObserver = new ResizeObserver(checkTruncation);
-    if (titleRef.current) {
-      resizeObserver.observe(titleRef.current);
-    }
-
-    return () => resizeObserver.disconnect();
-  }, [chat.title]);
 
   const handleClick = () => {
     setSelectedChat(chat.id);
@@ -116,20 +94,18 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
     <TooltipProvider>
       <div
         className={cn(
-          'group hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm overflow-hidden',
+          'group hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm min-w-0',
           isActive && 'bg-accent'
         )}
         onClick={handleClick}
       >
-        <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
-        <Tooltip open={isTruncated ? undefined : false}>
-          <TooltipTrigger asChild>
-            <span ref={titleRef} className="truncate">{chat.title}</span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="start" className="max-w-[300px]">
-            {chat.title}
-          </TooltipContent>
-        </Tooltip>
+        <MessageSquare className="text-muted-foreground h-4 w-4 flex-shrink-0" />
+        <span
+          className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+          title={chat.title}
+        >
+          {chat.title}
+        </span>
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -137,7 +113,7 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>

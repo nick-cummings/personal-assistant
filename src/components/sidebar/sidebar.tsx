@@ -144,8 +144,8 @@ export function Sidebar() {
             <Separator />
 
             {/* Folder/Chat Tree */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 overflow-hidden">
+            <ScrollArea className="flex-1 w-full">
+              <div className="p-2 w-full">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingSpinner />
