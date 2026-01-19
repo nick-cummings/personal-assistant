@@ -8,6 +8,7 @@ export async function GET() {
     const folders = await db.folder.findMany({
       include: {
         chats: {
+          where: { archived: false },
           orderBy: { updatedAt: 'desc' },
         },
       },
