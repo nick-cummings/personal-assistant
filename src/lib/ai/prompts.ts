@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { getConnectorMetadata } from '@/lib/connectors';
+import { getConnectorMetadata, getAllConnectorMetadata } from '@/lib/connectors';
 import type { ConnectorType } from '@/types';
 
 const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
@@ -50,8 +50,13 @@ export async function buildSystemPrompt(): Promise<string> {
     }).join('\n');
     parts.push(`\n## Available Connectors\n\nYou have access to ${connectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`);
   } else {
+    // List available connector types that can be configured
+    const allMetadata = getAllConnectorMetadata();
+    const availableTypes = allMetadata
+      .map((m) => `- **${m.name}** — ${m.description}`)
+      .join('\n');
     parts.push(
-      '\n## Available Connectors\n\nNo connectors are currently configured. You can help the user with general questions, but cannot access external tools.'
+      `\n## Available Connectors\n\nNo connectors are currently configured. The following connectors can be set up in Settings → Connectors:\n\n${availableTypes}\n\nIMPORTANT: Only mention the connectors listed above. Do not suggest connectors that are not in this list (e.g., no GitLab, Linear, Notion, Slack, etc.).`
     );
   }
 
