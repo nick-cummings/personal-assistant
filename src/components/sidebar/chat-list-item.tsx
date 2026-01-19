@@ -101,7 +101,8 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
       >
         <MessageSquare className="text-muted-foreground h-4 w-4 flex-shrink-0" />
         <span
-          className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+          className="overflow-hidden text-ellipsis whitespace-nowrap"
+          style={{ maxWidth: '160px' }}
           title={chat.title}
         >
           {chat.title}
