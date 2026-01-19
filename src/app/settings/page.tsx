@@ -28,17 +28,19 @@ export default function SettingsPage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-4 rounded-lg border p-4 opacity-50">
-            <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-lg">
-              <Plug className="text-muted-foreground h-6 w-6" />
+          <Link href="/settings/connectors" className="block">
+            <div className="hover:bg-accent flex items-center gap-4 rounded-lg border p-4 transition-colors">
+              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
+                <Plug className="text-primary h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-medium">Connectors</h2>
+                <p className="text-muted-foreground text-sm">
+                  Configure connections to GitHub, Jira, and other services
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="font-medium">Connectors</h2>
-              <p className="text-muted-foreground text-sm">
-                Configure connections to external services (Coming in Phase 3)
-              </p>
-            </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-4 rounded-lg border p-4 opacity-50">
             <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-lg">

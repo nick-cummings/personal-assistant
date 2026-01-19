@@ -4,6 +4,7 @@ import { User, Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { RichLinkCard, detectLinkType } from './rich-link-card';
 import type { Message } from '@/types';
 
 interface MessageBubbleProps {
@@ -77,12 +78,36 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                       </code>
                     );
                   },
-                  // Style links
-                  a: ({ children, ...props }) => (
-                    <a className="text-primary underline hover:no-underline" {...props}>
-                      {children}
-                    </a>
-                  ),
+                  // Style links - use rich cards for recognized external URLs
+                  a: ({ children, href, ...props }) => {
+                    // Check if this is a recognized external link
+                    if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                      const linkType = detectLinkType(href);
+                      if (linkType !== 'generic') {
+                        // Render as rich link card for recognized services
+                        const title = typeof children === 'string' ? children : href;
+                        return (
+                          <RichLinkCard
+                            url={href}
+                            title={title}
+                            type={linkType}
+                          />
+                        );
+                      }
+                    }
+                    // Default link styling for unrecognized or internal links
+                    return (
+                      <a
+                        className="text-primary underline hover:no-underline"
+                        href={href}
+                        target={href?.startsWith('http') ? '_blank' : undefined}
+                        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                        {...props}
+                      >
+                        {children}
+                      </a>
+                    );
+                  },
                   // Style lists
                   ul: ({ children }) => <ul className="list-disc pl-4 my-2">{children}</ul>,
                   ol: ({ children }) => <ol className="list-decimal pl-4 my-2">{children}</ol>,
