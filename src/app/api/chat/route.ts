@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
           data: { content: text },
         });
 
-        // Generate title if needed (in background, don't block the response)
+        // Generate title if needed - await so the title is ready when client refetches
         if (shouldGenerateTitle) {
-          generateChatTitle(chatId, message, modelId).catch(console.error);
+          await generateChatTitle(chatId, message, modelId);
         }
       },
     });
