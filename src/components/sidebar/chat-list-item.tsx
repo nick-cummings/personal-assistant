@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,15 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const titleRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (el) {
+      setIsTruncated(el.scrollWidth > el.clientWidth);
+    }
+  }, [chat.title]);
 
   const handleClick = () => {
     setSelectedChat(chat.id);
@@ -100,14 +109,18 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
         onClick={handleClick}
       >
         <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="flex-1 truncate">{chat.title}</span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="start" className="max-w-[300px]">
-            {chat.title}
-          </TooltipContent>
-        </Tooltip>
+        {isTruncated ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span ref={titleRef} className="flex-1 truncate">{chat.title}</span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="start" className="max-w-[300px]">
+              {chat.title}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span ref={titleRef} className="flex-1 truncate">{chat.title}</span>
+        )}
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
