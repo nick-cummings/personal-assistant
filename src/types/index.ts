@@ -7,7 +7,20 @@ export type { Folder, Chat, Message, Connector, Settings, UserContext };
 export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
 
 // Connector types
-export type ConnectorType = 'aws' | 'github' | 'jira' | 'confluence' | 'jenkins' | 'outlook';
+export type ConnectorType =
+  | 'aws'
+  | 'github'
+  | 'jira'
+  | 'confluence'
+  | 'jenkins'
+  | 'outlook'
+  | 'gmail'
+  | 'yahoo'
+  | 'google-drive'
+  | 'google-docs'
+  | 'google-sheets'
+  | 'google-calendar'
+  | 'google-cloud';
 
 export const CONNECTOR_TYPES: ConnectorType[] = [
   'aws',
@@ -16,6 +29,13 @@ export const CONNECTOR_TYPES: ConnectorType[] = [
   'confluence',
   'jenkins',
   'outlook',
+  'gmail',
+  'yahoo',
+  'google-drive',
+  'google-docs',
+  'google-sheets',
+  'google-calendar',
+  'google-cloud',
 ];
 
 // Folder with nested children and chats
