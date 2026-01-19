@@ -13,8 +13,11 @@ import type {
 const CHATS_KEY = ['chats'];
 const FOLDERS_KEY = ['folders'];
 
-async function fetchChats(folderId?: string): Promise<ChatWithFolder[]> {
-  const url = folderId ? `/api/chats?folderId=${folderId}` : '/api/chats';
+async function fetchChats(folderId?: string, archived?: boolean): Promise<ChatWithFolder[]> {
+  const params = new URLSearchParams();
+  if (folderId) params.set('folderId', folderId);
+  if (archived) params.set('archived', 'true');
+  const url = `/api/chats${params.toString() ? `?${params}` : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch chats');
   return res.json();
@@ -87,10 +90,17 @@ async function addMessage({
   return res.json();
 }
 
-export function useChats(folderId?: string) {
+export function useChats(folderId?: string, archived?: boolean) {
   return useQuery({
-    queryKey: [...CHATS_KEY, folderId],
-    queryFn: () => fetchChats(folderId),
+    queryKey: [...CHATS_KEY, { folderId, archived }],
+    queryFn: () => fetchChats(folderId, archived),
+  });
+}
+
+export function useArchivedChats() {
+  return useQuery({
+    queryKey: [...CHATS_KEY, 'archived'],
+    queryFn: () => fetchChats(undefined, true),
   });
 }
 
@@ -132,6 +142,19 @@ export function useDeleteChat() {
 
   return useMutation({
     mutationFn: deleteChat,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CHATS_KEY });
+      queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });
+    },
+  });
+}
+
+export function useArchiveChat() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) =>
+      updateChat({ id, archived }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CHATS_KEY });
       queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });

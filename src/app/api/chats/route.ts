@@ -7,16 +7,28 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const folderId = searchParams.get('folderId');
+    const archived = searchParams.get('archived') === 'true';
+
+    const whereClause: {
+      folderId?: string | null;
+      archived: boolean;
+    } = { archived };
+
+    if (folderId === 'unfiled') {
+      whereClause.folderId = null;
+    } else if (folderId) {
+      whereClause.folderId = folderId;
+    }
 
     const chats = await db.chat.findMany({
-      where: folderId === 'unfiled' ? { folderId: null } : folderId ? { folderId } : undefined,
+      where: whereClause,
       include: {
         folder: true,
         _count: {
           select: { messages: true },
         },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: archived ? { archivedAt: 'desc' } : { updatedAt: 'desc' },
     });
 
     return NextResponse.json(chats);

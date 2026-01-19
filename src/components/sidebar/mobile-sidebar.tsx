@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { SearchInput } from './search-input';
 import { FolderTree } from './folder-tree';
+import { ArchivedChats } from './archived-chats';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useFolders, useCreateFolder } from '@/hooks/use-folders';
@@ -99,10 +100,13 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                   <LoadingSpinner />
                 </div>
               ) : (
-                <FolderTree
-                  folders={folders ?? []}
-                  unfiledChats={unfiledChats}
-                />
+                <>
+                  <FolderTree
+                    folders={folders ?? []}
+                    unfiledChats={unfiledChats}
+                  />
+                  <ArchivedChats />
+                </>
               )}
             </div>
           </ScrollArea>

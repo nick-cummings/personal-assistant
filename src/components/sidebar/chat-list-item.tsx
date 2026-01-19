@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork } from 'lucide-react';
+import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,12 +22,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useUpdateChat, useDeleteChat, useForkChat } from '@/hooks/use-chats';
+import { useUpdateChat, useDeleteChat, useForkChat, useArchiveChat } from '@/hooks/use-chats';
 import { useAppStore } from '@/stores/app-store';
 import type { Chat } from '@/types';
 
 interface ChatListItemProps {
-  chat: Chat;
+  chat: Chat & { archived?: boolean };
   isActive?: boolean;
 }
 
@@ -37,6 +37,7 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   const updateChat = useUpdateChat();
   const deleteChat = useDeleteChat();
   const forkChat = useForkChat();
+  const archiveChat = useArchiveChat();
 
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -76,6 +77,19 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
     );
   };
 
+  const handleArchive = () => {
+    archiveChat.mutate(
+      { id: chat.id, archived: !chat.archived },
+      {
+        onSuccess: () => {
+          if (isActive && !chat.archived) {
+            router.push('/chat');
+          }
+        },
+      }
+    );
+  };
+
   return (
     <TooltipProvider>
       <div
@@ -110,6 +124,19 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
             <DropdownMenuItem onClick={handleFork}>
               <GitFork className="mr-2 h-4 w-4" />
               Fork
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchive}>
+              {chat.archived ? (
+                <>
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  Unarchive
+                </>
+              ) : (
+                <>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </>
+              )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

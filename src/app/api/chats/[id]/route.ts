@@ -56,12 +56,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    const updateData: {
+      title?: string;
+      folderId?: string | null;
+      archived?: boolean;
+      archivedAt?: Date | null;
+    } = {};
+
+    if (body.title !== undefined) {
+      updateData.title = body.title.trim() || 'Untitled';
+    }
+    if (body.folderId !== undefined) {
+      updateData.folderId = body.folderId;
+    }
+    if (body.archived !== undefined) {
+      updateData.archived = body.archived;
+      updateData.archivedAt = body.archived ? new Date() : null;
+    }
+
     const updated = await db.chat.update({
       where: { id },
-      data: {
-        ...(body.title !== undefined && { title: body.title.trim() || 'Untitled' }),
-        ...(body.folderId !== undefined && { folderId: body.folderId }),
-      },
+      data: updateData,
       include: {
         folder: true,
         messages: {

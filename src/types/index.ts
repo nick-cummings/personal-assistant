@@ -85,6 +85,7 @@ export interface CreateChatRequest {
 export interface UpdateChatRequest {
   title?: string;
   folderId?: string | null;
+  archived?: boolean;
 }
 
 export interface CreateMessageRequest {

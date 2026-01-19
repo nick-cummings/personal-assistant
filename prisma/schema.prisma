@@ -23,13 +23,17 @@ model Folder {
 }
 
 model Chat {
-  id        String    @id @default(cuid())
-  title     String
-  folderId  String?
-  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  title      String
+  folderId   String?
+  folder     Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  messages   Message[]
+  archived   Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([archived])
 }
 
 model Message {
