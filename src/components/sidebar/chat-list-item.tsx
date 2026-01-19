@@ -100,7 +100,14 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
         onClick={handleClick}
       >
         <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
-        <span className="flex-1 truncate">{chat.title}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex-1 truncate">{chat.title}</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="start" className="max-w-[300px]">
+            {chat.title}
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
