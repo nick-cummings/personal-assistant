@@ -1,8 +1,12 @@
-import { streamText, generateText, type ModelMessage } from 'ai';
+import { streamText, generateText, stepCountIs, type ModelMessage } from 'ai';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { getModel } from '@/lib/ai/client';
 import { buildSystemPrompt, generateTitlePrompt } from '@/lib/ai/prompts';
+import { getAllConnectorTools } from '@/lib/connectors';
+
+// Import connectors to ensure they're registered
+import '@/lib/connectors';
 
 export const maxDuration = 60;
 
@@ -64,6 +68,11 @@ export async function POST(request: NextRequest) {
     const modelId = settings?.selectedModel ?? 'claude-sonnet-4-20250514';
     const model = getModel(modelId);
 
+    // Get connector tools
+    const connectorTools = await getAllConnectorTools();
+    const hasTools = Object.keys(connectorTools).length > 0;
+    const tools = hasTools ? connectorTools : undefined;
+
     // Check if this is the first user message (for title generation)
     const isFirstMessage = chat.messages.filter((m) => m.role === 'user').length === 0;
     const shouldGenerateTitle = isFirstMessage && chat.title === 'New Chat';
@@ -82,6 +91,8 @@ export async function POST(request: NextRequest) {
       model,
       system: systemPrompt,
       messages,
+      tools,
+      stopWhen: stepCountIs(5), // Allow up to 5 tool call rounds
       async onFinish({ text }) {
         // Update the assistant message with final content
         await db.message.update({
