@@ -116,7 +116,7 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
     <TooltipProvider>
       <div
         className={cn(
-          'group hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm',
+          'group hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm overflow-hidden',
           isActive && 'bg-accent'
         )}
         onClick={handleClick}
@@ -124,7 +124,7 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
         <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
         <Tooltip open={isTruncated ? undefined : false}>
           <TooltipTrigger asChild>
-            <span ref={titleRef} className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{chat.title}</span>
+            <span ref={titleRef} className="truncate">{chat.title}</span>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="start" className="max-w-[300px]">
             {chat.title}
