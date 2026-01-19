@@ -46,10 +46,23 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   const titleRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const el = titleRef.current;
-    if (el) {
-      setIsTruncated(el.scrollWidth > el.clientWidth);
+    const checkTruncation = () => {
+      const el = titleRef.current;
+      if (el) {
+        setIsTruncated(el.scrollWidth > el.clientWidth);
+      }
+    };
+
+    // Check after layout
+    checkTruncation();
+
+    // Also check on resize
+    const resizeObserver = new ResizeObserver(checkTruncation);
+    if (titleRef.current) {
+      resizeObserver.observe(titleRef.current);
     }
+
+    return () => resizeObserver.disconnect();
   }, [chat.title]);
 
   const handleClick = () => {
@@ -111,7 +124,7 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
         <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
         <Tooltip open={isTruncated ? undefined : false}>
           <TooltipTrigger asChild>
-            <span ref={titleRef} className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{chat.title}</span>
+            <span ref={titleRef} className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{chat.title}</span>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="start" className="max-w-[300px]">
             {chat.title}
