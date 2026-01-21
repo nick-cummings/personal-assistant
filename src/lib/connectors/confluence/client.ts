@@ -204,6 +204,62 @@ export class ConfluenceInstanceClient {
     await this.listSpaces();
   }
 
+  async createDraftPage(options: {
+    spaceId: string;
+    title: string;
+    content?: string;
+    parentId?: string;
+  }): Promise<ConfluencePage> {
+    // Use REST API v2 for creating pages
+    const body: {
+      spaceId: string;
+      status: string;
+      title: string;
+      parentId?: string;
+      body?: {
+        representation: string;
+        value: string;
+      };
+    } = {
+      spaceId: options.spaceId,
+      status: 'draft',
+      title: options.title,
+    };
+
+    if (options.parentId) {
+      body.parentId = options.parentId;
+    }
+
+    if (options.content) {
+      // Convert plain text to basic storage format
+      body.body = {
+        representation: 'storage',
+        value: this.textToStorageFormat(options.content),
+      };
+    }
+
+    return this.fetch<ConfluencePage>('/pages', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  private textToStorageFormat(text: string): string {
+    // Convert plain text to Confluence storage format (XHTML)
+    // Split by double newlines for paragraphs, single newlines become <br/>
+    const paragraphs = text.split(/\n\n+/);
+    return paragraphs
+      .map((para) => {
+        const escaped = para
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br />');
+        return `<p>${escaped}</p>`;
+      })
+      .join('\n');
+  }
+
   async listDraftPages(spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
     // Use REST API v1 which supports draft status (v2 does not)
     let url = `https://${this.host}/wiki/rest/api/content?status=draft&limit=${limit}&expand=version,space`;

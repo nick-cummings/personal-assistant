@@ -513,6 +513,121 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
     },
   });
 
+  const confluence_create_draft = tool({
+    description:
+      'Create a new draft page in Confluence. The page will be saved as a draft (not published) so it can be reviewed and edited before publishing. Returns the page ID, title, and URLs for viewing and editing. Use confluence_list_spaces first to find the space ID where you want to create the page.',
+    inputSchema: z.object({
+      spaceId: z
+        .string()
+        .describe(
+          'The ID of the space where the page should be created. Use confluence_list_spaces to find available space IDs.'
+        ),
+      title: z
+        .string()
+        .describe('The title of the new page'),
+      content: z
+        .string()
+        .optional()
+        .describe(
+          'Optional: The content of the page as plain text. Paragraphs should be separated by blank lines. If not provided, an empty page will be created.'
+        ),
+      parentId: z
+        .string()
+        .optional()
+        .describe(
+          'Optional: The ID of the parent page if this should be a child page. Use confluence_search or confluence_get_page_children to find parent page IDs.'
+        ),
+      instance: z
+        .string()
+        .optional()
+        .describe(getInstanceDescription(client)),
+    }),
+    execute: async ({ spaceId, title, content, parentId, instance }) => {
+      console.log('[Confluence] confluence_create_draft called with:', {
+        spaceId,
+        title,
+        contentLength: content?.length,
+        parentId,
+        instance,
+      });
+
+      if (!client.hasCredentials()) {
+        console.log('[Confluence] No credentials configured');
+        return {
+          error:
+            'Confluence not configured. Please add your host, email, and API token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        // Determine which instance to use
+        const instanceName = instance || client.getInstanceNames()[0];
+        const instanceClient = client.getInstance(instanceName);
+
+        if (!instanceClient) {
+          return {
+            error: instance
+              ? `Instance "${instance}" not found. Available instances: ${client.getInstanceNames().join(', ')}`
+              : 'No Confluence instances configured.',
+          };
+        }
+
+        console.log('[Confluence] Creating draft page in instance:', instanceName);
+
+        const page = await instanceClient.createDraftPage({
+          spaceId,
+          title,
+          content,
+          parentId,
+        });
+
+        console.log('[Confluence] Draft page created:', {
+          id: page.id,
+          title: page.title,
+          status: page.status,
+        });
+
+        return {
+          success: true,
+          instance: instanceName,
+          host: instanceClient.host,
+          id: page.id,
+          title: page.title,
+          spaceId: page.spaceId,
+          status: page.status,
+          url: `https://${instanceClient.host}/wiki${page._links.webui}`,
+          editUrl: page._links.editui
+            ? `https://${instanceClient.host}/wiki${page._links.editui}`
+            : `https://${instanceClient.host}/wiki/pages/resumedraft.action?draftId=${page.id}`,
+          message: `Draft page "${title}" created successfully. You can edit it at the editUrl before publishing.`,
+        };
+      } catch (error) {
+        console.error('[Confluence] Create draft error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'Confluence authentication failed. Please check your email and API token in Settings → Connectors.',
+          };
+        }
+        if (message.includes('403') || message.includes('Forbidden')) {
+          return {
+            error:
+              'You do not have permission to create pages in this space. Check your Confluence permissions.',
+          };
+        }
+        if (message.includes('404')) {
+          return {
+            error: `Space with ID "${spaceId}" was not found. Use confluence_list_spaces to find valid space IDs.`,
+          };
+        }
+        return {
+          error: `Failed to create Confluence draft: ${message}`,
+        };
+      }
+    },
+  });
+
   return {
     confluence_list_spaces,
     confluence_search,
@@ -520,5 +635,6 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
     confluence_get_page_children,
     confluence_list_drafts,
     confluence_list_instances,
+    confluence_create_draft,
   };
 }
