@@ -11,6 +11,10 @@ export class GitHubClient {
     this.defaultOwner = config.defaultOwner;
   }
 
+  hasCredentials(): boolean {
+    return !!this.token;
+  }
+
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
@@ -103,6 +107,49 @@ export class GitHubClient {
     );
     return response.items;
   }
+
+  // List repositories for the authenticated user or an organization
+  async listRepos(options?: {
+    type?: 'all' | 'owner' | 'public' | 'private' | 'member';
+    sort?: 'created' | 'updated' | 'pushed' | 'full_name';
+    org?: string;
+    limit?: number;
+  }): Promise<GitHubRepository[]> {
+    const params = new URLSearchParams();
+    if (options?.type) params.set('type', options.type);
+    if (options?.sort) params.set('sort', options.sort);
+    params.set('per_page', (options?.limit ?? 100).toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    if (options?.org) {
+      return this.request(`/orgs/${options.org}/repos${query}`);
+    }
+    return this.request(`/user/repos${query}`);
+  }
+}
+
+export interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  owner: GitHubUser;
+  html_url: string;
+  description: string | null;
+  fork: boolean;
+  created_at: string;
+  updated_at: string;
+  pushed_at: string;
+  homepage: string | null;
+  size: number;
+  stargazers_count: number;
+  watchers_count: number;
+  language: string | null;
+  forks_count: number;
+  open_issues_count: number;
+  default_branch: string;
+  archived: boolean;
+  topics: string[];
 }
 
 // GitHub API types
