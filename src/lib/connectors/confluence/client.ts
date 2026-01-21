@@ -1,4 +1,4 @@
-import type { ConfluenceConfig } from '../types';
+import type { ConfluenceConfig, AtlassianInstance } from '../types';
 
 // Confluence API response types
 interface ConfluenceSpace {
@@ -69,22 +69,19 @@ interface ConfluenceSpacesResponse {
   };
 }
 
-export class ConfluenceClient {
+// Single Confluence instance client
+export class ConfluenceInstanceClient {
   private baseUrl: string;
   private authHeader: string;
-  private config: ConfluenceConfig;
   public host: string;
+  public name: string;
 
-  constructor(config: ConfluenceConfig) {
-    this.config = config;
-    this.host = config.host.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  constructor(instance: AtlassianInstance) {
+    this.name = instance.name;
+    this.host = instance.host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     this.baseUrl = `https://${this.host}/wiki/api/v2`;
     this.authHeader =
-      'Basic ' + Buffer.from(`${config.email}:${config.apiToken}`).toString('base64');
-  }
-
-  hasCredentials(): boolean {
-    return !!(this.config.host && this.config.email && this.config.apiToken);
+      'Basic ' + Buffer.from(`${instance.email}:${instance.apiToken}`).toString('base64');
   }
 
   private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -277,5 +274,129 @@ export class ConfluenceClient {
       .replace(/&#39;/g, "'")
       .replace(/\s+/g, ' ')
       .trim();
+  }
+}
+
+// Multi-instance Confluence client manager
+export class ConfluenceClient {
+  private instances: Map<string, ConfluenceInstanceClient> = new Map();
+  private instanceList: AtlassianInstance[] = [];
+
+  constructor(config: ConfluenceConfig) {
+    // Handle both new multi-instance and legacy single-instance configs
+    if (config.instances && config.instances.length > 0) {
+      this.instanceList = config.instances;
+      for (const instance of config.instances) {
+        this.instances.set(instance.name, new ConfluenceInstanceClient(instance));
+      }
+    } else if (config.host && config.email && config.apiToken) {
+      // Legacy single-instance config - convert to instance format
+      const legacyInstance: AtlassianInstance = {
+        name: 'Default',
+        host: config.host,
+        email: config.email,
+        apiToken: config.apiToken,
+      };
+      this.instanceList = [legacyInstance];
+      this.instances.set('Default', new ConfluenceInstanceClient(legacyInstance));
+    }
+  }
+
+  hasCredentials(): boolean {
+    return this.instances.size > 0;
+  }
+
+  // Get list of configured instance names
+  getInstanceNames(): string[] {
+    return Array.from(this.instances.keys());
+  }
+
+  // Get a specific instance by name
+  getInstance(name: string): ConfluenceInstanceClient | undefined {
+    return this.instances.get(name);
+  }
+
+  // Get all instances
+  getAllInstances(): ConfluenceInstanceClient[] {
+    return Array.from(this.instances.values());
+  }
+
+  // Execute a query across all instances (or a specific one)
+  async queryAllInstances<T>(
+    queryFn: (client: ConfluenceInstanceClient) => Promise<T>,
+    instanceName?: string
+  ): Promise<{ instance: string; host: string; result: T }[]> {
+    const results: { instance: string; host: string; result: T }[] = [];
+
+    if (instanceName) {
+      const instance = this.instances.get(instanceName);
+      if (instance) {
+        const result = await queryFn(instance);
+        results.push({ instance: instance.name, host: instance.host, result });
+      }
+    } else {
+      // Query all instances in parallel
+      const promises = Array.from(this.instances.entries()).map(async ([name, client]) => {
+        try {
+          const result = await queryFn(client);
+          return { instance: name, host: client.host, result };
+        } catch (error) {
+          // Log but don't fail - one instance failing shouldn't break others
+          console.error(`[Confluence] Error querying instance "${name}":`, error);
+          return null;
+        }
+      });
+
+      const settled = await Promise.all(promises);
+      for (const r of settled) {
+        if (r) results.push(r);
+      }
+    }
+
+    return results;
+  }
+
+  // Legacy methods that work with the first/default instance
+  // Keeping for backward compatibility with tests
+
+  get host(): string {
+    const first = this.getAllInstances()[0];
+    return first?.host || '';
+  }
+
+  async listSpaces(): Promise<ConfluenceSpace[]> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.listSpaces();
+  }
+
+  async search(query: string, spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.search(query, spaceKey, limit);
+  }
+
+  async getPage(pageId: string): Promise<ConfluencePage & { bodyContent: string }> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.getPage(pageId);
+  }
+
+  async getPageChildren(pageId: string): Promise<ConfluencePage[]> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.getPageChildren(pageId);
+  }
+
+  async testConnection(): Promise<void> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.testConnection();
+  }
+
+  async listDraftPages(spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
+    const first = this.getAllInstances()[0];
+    if (!first) throw new Error('No Confluence instances configured');
+    return first.listDraftPages(spaceKey, limit);
   }
 }

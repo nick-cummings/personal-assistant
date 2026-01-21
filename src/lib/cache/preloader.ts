@@ -124,8 +124,8 @@ const PRELOAD_CONFIGS: Partial<Record<ConnectorType, PreloadConfig[]>> = {
     {
       cacheKey: CACHE_KEYS.GMAIL_LABELS,
       fetcher: async (_connectorId, config: GmailConfig) => {
-        const { GmailClient } = await import('@/lib/connectors/gmail/client');
-        const client = new GmailClient(config);
+        const { GmailImapClient } = await import('@/lib/connectors/gmail/client');
+        const client = new GmailImapClient(config);
         return client.listLabels();
       },
       ttl: CACHE_TTL.LONG,

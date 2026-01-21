@@ -807,13 +807,14 @@ export function createAWSTools(client: AWSClient): ToolSet {
           'Optional filter expression to filter results after scanning (e.g., "contains(#name, :value)"). Note: filtering happens after reading, so it still consumes read capacity for all items.'
         ),
       expressionAttributeNames: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe(
           'Substitution tokens for attribute names in expressions (e.g., {"#name": "userName"}). Required when attribute names are reserved words or contain special characters.'
         ),
       expressionAttributeValues: z
         .record(
+          z.string(),
           z.object({
             S: z.string().optional().describe('String value'),
             N: z.string().optional().describe('Number value (as string)'),
@@ -906,12 +907,13 @@ export function createAWSTools(client: AWSClient): ToolSet {
           'Key condition expression specifying partition key (required) and optional sort key conditions. Examples: "#pk = :pkValue" or "#pk = :pkValue AND #sk BETWEEN :start AND :end"'
         ),
       expressionAttributeNames: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .describe(
           'Substitution tokens for attribute names (e.g., {"#pk": "userId", "#sk": "timestamp"}). Always use # prefix for names in expressions.'
         ),
       expressionAttributeValues: z
         .record(
+          z.string(),
           z.object({
             S: z.string().optional().describe('String value'),
             N: z.string().optional().describe('Number value (as string)'),

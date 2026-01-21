@@ -1,183 +1,310 @@
 /**
- * Manual test script for Confluence connector
+ * Manual test script for Confluence connector with multi-instance support
  *
  * Usage:
  *   bun run src/lib/connectors/confluence/test-confluence.ts
  *
- * Make sure to set environment variables in .env:
- *   CONFLUENCE_HOST or CONFLUENCE_BASE_URL=your-company.atlassian.net
- *   CONFLUENCE_EMAIL=you@company.com
- *   CONFLUENCE_API_TOKEN=your-api-token
+ * Environment variables (in order of precedence):
+ *
+ * Option 1: Multiple instances (JSON array)
+ *   ATLASSIAN_INSTANCES='[{"name":"Work","host":"company.atlassian.net","email":"you@company.com","apiToken":"xxx"},{"name":"Client","host":"client.atlassian.net","email":"you@client.com","apiToken":"yyy"}]'
+ *
+ * Option 2: Single instance with individual vars
+ *   ATLASSIAN_HOST=your-company.atlassian.net
+ *   ATLASSIAN_EMAIL=you@company.com
+ *   ATLASSIAN_API_TOKEN=your-api-token
+ *   ATLASSIAN_INSTANCE_NAME=Work (optional, defaults to "Default")
+ *
+ * Legacy support (deprecated, will fall back to these if ATLASSIAN_* not set):
+ *   CONFLUENCE_HOST, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN
+ *   JIRA_HOST, JIRA_EMAIL, JIRA_API_TOKEN
  */
 
 import { ConfluenceClient } from './client';
+import type { AtlassianInstance } from '../types';
 
-// Support both CONFLUENCE_HOST and CONFLUENCE_BASE_URL (extract host from URL if needed)
-function getHost(): string {
-  if (process.env.CONFLUENCE_HOST) {
-    return process.env.CONFLUENCE_HOST;
+// Parse instances from environment
+function getInstances(): AtlassianInstance[] {
+  // Option 1: JSON array of instances
+  if (process.env.ATLASSIAN_INSTANCES) {
+    try {
+      const instances = JSON.parse(process.env.ATLASSIAN_INSTANCES);
+      if (Array.isArray(instances) && instances.length > 0) {
+        return instances.map((inst, idx) => ({
+          name: inst.name || `Instance ${idx + 1}`,
+          host: extractHost(inst.host),
+          email: inst.email,
+          apiToken: inst.apiToken,
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to parse ATLASSIAN_INSTANCES JSON:', e);
+    }
   }
-  if (process.env.CONFLUENCE_BASE_URL) {
-    // Extract host from URL like "https://nick-cummings.atlassian.net/wiki"
-    const url = process.env.CONFLUENCE_BASE_URL;
-    const match = url.match(/https?:\/\/([^\/]+)/);
-    return match ? match[1] : url;
+
+  // Option 2: Single instance from individual vars
+  const host =
+    extractHost(process.env.ATLASSIAN_HOST) ||
+    extractHost(process.env.ATLASSIAN_BASE_URL) ||
+    // Legacy fallbacks
+    extractHost(process.env.CONFLUENCE_HOST) ||
+    extractHost(process.env.CONFLUENCE_BASE_URL) ||
+    extractHost(process.env.JIRA_HOST) ||
+    extractHost(process.env.JIRA_BASE_URL);
+
+  const email =
+    process.env.ATLASSIAN_EMAIL ||
+    process.env.CONFLUENCE_EMAIL ||
+    process.env.JIRA_EMAIL;
+
+  const apiToken =
+    process.env.ATLASSIAN_API_TOKEN ||
+    process.env.CONFLUENCE_API_TOKEN ||
+    process.env.JIRA_API_TOKEN;
+
+  const name = process.env.ATLASSIAN_INSTANCE_NAME || 'Default';
+
+  if (host && email && apiToken) {
+    return [{ name, host, email, apiToken }];
   }
-  return '';
+
+  return [];
 }
 
-const config = {
-  host: getHost(),
-  email: process.env.CONFLUENCE_EMAIL || '',
-  apiToken: process.env.CONFLUENCE_API_TOKEN || '',
-};
+// Extract host from URL if needed
+function extractHost(value: string | undefined): string {
+  if (!value) return '';
+  const match = value.match(/https?:\/\/([^\/]+)/);
+  return match ? match[1] : value;
+}
 
 async function main() {
-  console.log('=== Confluence Connector Test ===\n');
+  console.log('=== Confluence Connector Test (Multi-Instance) ===\n');
 
-  if (!config.host || !config.email || !config.apiToken) {
-    console.error('Error: Missing credentials');
-    console.error('Set CONFLUENCE_HOST (or CONFLUENCE_BASE_URL), CONFLUENCE_EMAIL, and CONFLUENCE_API_TOKEN environment variables');
-    console.error('Example:');
+  const instances = getInstances();
+
+  if (instances.length === 0) {
+    console.error('Error: No Atlassian instances configured');
+    console.error('\nOption 1: Set ATLASSIAN_INSTANCES as a JSON array:');
     console.error(
-      '  CONFLUENCE_HOST=your-company.atlassian.net CONFLUENCE_EMAIL=you@company.com CONFLUENCE_API_TOKEN=xxxx bun run src/lib/connectors/confluence/test-confluence.ts'
+      '  ATLASSIAN_INSTANCES=\'[{"name":"Work","host":"company.atlassian.net","email":"you@company.com","apiToken":"xxx"}]\''
     );
+    console.error('\nOption 2: Set individual environment variables:');
+    console.error('  ATLASSIAN_HOST=your-company.atlassian.net');
+    console.error('  ATLASSIAN_EMAIL=you@company.com');
+    console.error('  ATLASSIAN_API_TOKEN=your-api-token');
     process.exit(1);
   }
 
-  console.log('Host:', config.host);
-  console.log('Email:', config.email);
-  console.log('API Token:', config.apiToken.substring(0, 4) + '...\n');
+  console.log(`Configured ${instances.length} instance(s):`);
+  for (const inst of instances) {
+    console.log(`  - ${inst.name}: ${inst.host} (${inst.email})`);
+  }
+  console.log();
 
-  const client = new ConfluenceClient(config);
+  const client = new ConfluenceClient({ instances });
 
-  // Test 1: Check credentials method
-  console.log('--- Test 1: hasCredentials() ---');
+  // Test 1: List instances
+  console.log('--- Test 1: getAllInstances() ---');
+  const allInstances = client.getAllInstances();
+  console.log('Instances:', allInstances.map((i) => `${i.name} (${i.host})`).join(', '));
+  console.log();
+
+  // Test 2: Check credentials
+  console.log('--- Test 2: hasCredentials() ---');
   console.log('Has credentials:', client.hasCredentials());
   console.log();
 
-  // Test 2: Test connection
-  console.log('--- Test 2: testConnection() ---');
+  // Test 3: Test connection for each instance
+  console.log('--- Test 3: testConnection() ---');
   try {
     await client.testConnection();
-    console.log('Connection successful!\n');
+    console.log('Connection successful!');
+    console.log();
   } catch (error) {
-    console.error('Connection failed:', error);
+    console.error('Connection test failed:', error);
     process.exit(1);
   }
 
-  // Test 3: List spaces
-  console.log('--- Test 3: listSpaces() ---');
-  let firstSpaceKey: string | null = null;
+  // Test 4: List spaces across all instances
+  console.log('--- Test 4: queryAllInstances - listSpaces() ---');
+  let firstSpace: { instance: string; key: string } | null = null;
   try {
-    const spaces = await client.listSpaces();
-    console.log('Found', spaces.length, 'spaces:');
-    for (const space of spaces.slice(0, 10)) {
-      console.log(`  - ${space.name} (${space.key}): ${space.type}`);
-      if (!firstSpaceKey) {
-        firstSpaceKey = space.key;
+    const results = await client.queryAllInstances((instClient) => instClient.listSpaces());
+    console.log(`Queried ${results.length} instance(s):`);
+    for (const { instance, host, result: spaces } of results) {
+      console.log(`\n  Instance: ${instance} (${host})`);
+      console.log(`  Found ${spaces.length} spaces:`);
+      for (const space of spaces.slice(0, 5)) {
+        console.log(`    - ${space.name} (${space.key}): ${space.type}`);
+        if (!firstSpace) {
+          firstSpace = { instance, key: space.key };
+        }
       }
-    }
-    if (spaces.length > 10) {
-      console.log(`  ... and ${spaces.length - 10} more`);
+      if (spaces.length > 5) {
+        console.log(`    ... and ${spaces.length - 5} more`);
+      }
     }
     console.log();
   } catch (error) {
     console.error('List spaces failed:', error);
   }
 
-  // Test 4: Search for content
-  console.log('--- Test 4: search("test", limit: 5) ---');
-  let firstPageId: string | null = null;
+  // Test 5: Search across all instances
+  console.log('--- Test 5: queryAllInstances - search("test", limit: 5) ---');
+  let firstPage: { instance: string; id: string } | null = null;
   try {
-    const results = await client.search('test', undefined, 5);
-    console.log('Found', results.totalSize, 'total results, showing', results.results.length, ':');
-    for (const result of results.results) {
-      console.log(`  - [${result.content.id}] ${result.content.title}`);
-      console.log(`    Space: ${result.content.spaceId}`);
-      console.log(`    Excerpt: ${result.excerpt.substring(0, 100)}...`);
-      console.log();
-      if (!firstPageId) {
-        firstPageId = result.content.id;
+    const results = await client.queryAllInstances((instClient) => instClient.search('test', undefined, 5));
+    console.log(`Queried ${results.length} instance(s):`);
+    for (const { instance, host, result } of results) {
+      console.log(`\n  Instance: ${instance} (${host})`);
+      console.log(`  Found ${result.totalSize} total results, showing ${result.results.length}:`);
+      for (const r of result.results.slice(0, 3)) {
+        console.log(`    - [${r.content.id}] ${r.content.title}`);
+        console.log(`      Space: ${r.content.spaceId}`);
+        if (!firstPage) {
+          firstPage = { instance, id: r.content.id };
+        }
+      }
+      if (result.results.length > 3) {
+        console.log(`    ... and ${result.results.length - 3} more`);
       }
     }
+    console.log();
   } catch (error) {
     console.error('Search failed:', error);
   }
 
-  // Test 5: Get specific page
-  if (firstPageId) {
-    console.log('--- Test 5: getPage("' + firstPageId + '") ---');
+  // Test 6: Get specific page from a specific instance
+  if (firstPage) {
+    console.log(`--- Test 6: getPage("${firstPage.id}") from instance "${firstPage.instance}" ---`);
     try {
-      const page = await client.getPage(firstPageId);
-      console.log('Got page:');
-      console.log('  ID:', page.id);
-      console.log('  Title:', page.title);
-      console.log('  Space:', page.spaceId);
-      console.log('  Version:', page.version.number);
-      console.log('  Last Modified:', page.version.createdAt);
-      console.log('  Content length:', page.bodyContent?.length || 0, 'chars');
-      console.log('  Content preview:', page.bodyContent?.substring(0, 200) || '(empty)');
+      const results = await client.queryAllInstances(
+        async (instClient) => {
+          try {
+            return await instClient.getPage(firstPage!.id);
+          } catch {
+            return null;
+          }
+        },
+        firstPage.instance
+      );
+      const found = results.find((r) => r.result !== null);
+      if (found && found.result) {
+        const page = found.result;
+        console.log(`Got page from ${found.instance}:`);
+        console.log('  ID:', page.id);
+        console.log('  Title:', page.title);
+        console.log('  Space:', page.spaceId);
+        console.log('  Version:', page.version.number);
+        console.log('  Last Modified:', page.version.createdAt);
+        console.log('  Content length:', page.bodyContent?.length || 0, 'chars');
+        console.log('  Content preview:', page.bodyContent?.substring(0, 150) || '(empty)');
+      }
       console.log();
     } catch (error) {
       console.error('Get page failed:', error);
     }
   } else {
-    console.log('--- Test 5: Skipped (no pages found) ---\n');
+    console.log('--- Test 6: Skipped (no pages found) ---\n');
   }
 
-  // Test 6: Get page children
-  if (firstPageId) {
-    console.log('--- Test 6: getPageChildren("' + firstPageId + '") ---');
+  // Test 7: Get page children from specific instance
+  if (firstPage) {
+    console.log(`--- Test 7: getPageChildren("${firstPage.id}") from instance "${firstPage.instance}" ---`);
     try {
-      const children = await client.getPageChildren(firstPageId);
-      console.log('Found', children.length, 'child pages:');
-      for (const child of children.slice(0, 5)) {
-        console.log(`  - [${child.id}] ${child.title}`);
-      }
-      if (children.length > 5) {
-        console.log(`  ... and ${children.length - 5} more`);
+      const results = await client.queryAllInstances(
+        async (instClient) => {
+          try {
+            return await instClient.getPageChildren(firstPage!.id);
+          } catch {
+            return null;
+          }
+        },
+        firstPage.instance
+      );
+      const found = results.find((r) => r.result !== null);
+      if (found && found.result) {
+        const children = found.result;
+        console.log(`Got ${children.length} child pages from ${found.instance}:`);
+        for (const child of children.slice(0, 5)) {
+          console.log(`  - [${child.id}] ${child.title}`);
+        }
+        if (children.length > 5) {
+          console.log(`  ... and ${children.length - 5} more`);
+        }
+      } else {
+        console.log('No children found or page not found');
       }
       console.log();
     } catch (error) {
       console.error('Get page children failed:', error);
     }
   } else {
-    console.log('--- Test 6: Skipped (no pages found) ---\n');
+    console.log('--- Test 7: Skipped (no pages found) ---\n');
   }
 
-  // Test 7: Search within a specific space
-  if (firstSpaceKey) {
-    console.log(`--- Test 7: search("guide", spaceKey: "${firstSpaceKey}", limit: 3) ---`);
+  // Test 8: Search within a specific space across instances
+  if (firstSpace) {
+    console.log(`--- Test 8: search("guide", spaceKey: "${firstSpace.key}") from "${firstSpace.instance}" ---`);
     try {
-      const results = await client.search('guide', firstSpaceKey, 3);
-      console.log('Found', results.totalSize, 'results in space', firstSpaceKey, ':');
-      for (const result of results.results) {
-        console.log(`  - [${result.content.id}] ${result.content.title}`);
+      const results = await client.queryAllInstances(
+        (instClient) => instClient.search('guide', firstSpace!.key, 3),
+        firstSpace.instance
+      );
+      const found = results[0];
+      if (found) {
+        console.log(`Found ${found.result.totalSize} results in space ${firstSpace.key} (${found.instance}):`);
+        for (const r of found.result.results) {
+          console.log(`  - [${r.content.id}] ${r.content.title}`);
+        }
       }
       console.log();
     } catch (error) {
       console.error('Search in space failed:', error);
     }
   } else {
-    console.log('--- Test 7: Skipped (no spaces found) ---\n');
+    console.log('--- Test 8: Skipped (no spaces found) ---\n');
   }
 
-  // Test 8: List draft pages (using REST API v1)
-  console.log('--- Test 8: listDraftPages() ---');
+  // Test 9: List drafts across all instances
+  console.log('--- Test 9: queryAllInstances - listDraftPages() ---');
   try {
-    const drafts = await client.listDraftPages();
-    console.log('Found', drafts.totalSize, 'draft pages:');
-    for (const draft of drafts.results.slice(0, 5)) {
-      console.log(`  - [${draft.content.id}] ${draft.content.title}`);
-      console.log(`    Space: ${draft.content.spaceId}, Status: ${draft.content.status}`);
-    }
-    if (drafts.results.length > 5) {
-      console.log(`  ... and ${drafts.results.length - 5} more`);
+    const results = await client.queryAllInstances((instClient) => instClient.listDraftPages());
+    console.log(`Queried ${results.length} instance(s):`);
+    for (const { instance, host, result } of results) {
+      console.log(`\n  Instance: ${instance} (${host})`);
+      console.log(`  Found ${result.totalSize} draft pages:`);
+      for (const draft of result.results.slice(0, 3)) {
+        console.log(`    - [${draft.content.id}] ${draft.content.title}`);
+        console.log(`      Space: ${draft.content.spaceId}, Status: ${draft.content.status}`);
+      }
+      if (result.results.length > 3) {
+        console.log(`    ... and ${result.results.length - 3} more`);
+      }
     }
     console.log();
   } catch (error) {
-    console.error('List draft pages failed:', error);
+    console.error('List drafts failed:', error);
+  }
+
+  // Test 10: Query specific instance only
+  if (instances.length > 1) {
+    const targetInstance = instances[0].name;
+    console.log(`--- Test 10: Query single instance "${targetInstance}" only ---`);
+    try {
+      const results = await client.queryAllInstances(
+        (instClient) => instClient.listSpaces(),
+        targetInstance
+      );
+      console.log(`Queried instance: ${results.map((r) => r.instance).join(', ')}`);
+      console.log(`Found ${results[0]?.result.length || 0} spaces in ${targetInstance}`);
+      console.log();
+    } catch (error) {
+      console.error('Query single instance failed:', error);
+    }
+  } else {
+    console.log('--- Test 10: Skipped (only one instance configured) ---\n');
   }
 
   console.log('=== All tests complete ===');

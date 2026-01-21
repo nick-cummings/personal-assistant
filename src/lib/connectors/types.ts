@@ -25,18 +25,32 @@ export interface GitHubConfig extends BaseConnectorConfig {
   defaultOwner?: string;
 }
 
-// Jira connector config
-export interface JiraConfig extends BaseConnectorConfig {
-  host: string;
+// Atlassian instance configuration (shared between Jira and Confluence)
+export interface AtlassianInstance {
+  name: string; // Display name like "Work", "Client A", etc.
+  host: string; // e.g., "company.atlassian.net"
   email: string;
   apiToken: string;
 }
 
-// Confluence connector config (often same as Jira)
+// Jira connector config - supports multiple instances
+export interface JiraConfig extends BaseConnectorConfig {
+  // Multi-instance config (preferred)
+  instances?: AtlassianInstance[];
+  // Legacy single-instance fields for backward compatibility
+  host?: string;
+  email?: string;
+  apiToken?: string;
+}
+
+// Confluence connector config - supports multiple instances
 export interface ConfluenceConfig extends BaseConnectorConfig {
-  host: string;
-  email: string;
-  apiToken: string;
+  // Multi-instance config (preferred)
+  instances?: AtlassianInstance[];
+  // Legacy single-instance fields for backward compatibility
+  host?: string;
+  email?: string;
+  apiToken?: string;
 }
 
 // Jenkins connector config
