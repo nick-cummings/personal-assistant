@@ -127,8 +127,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   h1: ({ children }) => <h1 className="text-lg font-bold mt-4 mb-2">{children}</h1>,
                   h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>,
                   h3: ({ children }) => <h3 className="text-sm font-bold mt-2 mb-1">{children}</h3>,
-                  // Style paragraphs
-                  p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
+                  // Style paragraphs - use div to allow block-level children like RichLinkCard
+                  p: ({ children }) => <div className="my-2 first:mt-0 last:mb-0">{children}</div>,
                   // Style blockquotes
                   blockquote: ({ children }) => (
                     <blockquote className="border-l-2 border-primary/50 pl-3 my-2 italic">

@@ -156,6 +156,7 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
   const config = typeConfig[type];
   const Icon = config.icon;
 
+  // Use only span elements to avoid hydration errors when rendered inside <p> tags
   return (
     <a
       href={url}
@@ -167,11 +168,11 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
         config.bgColor
       )}
     >
-      <div className={cn('mt-0.5 flex-shrink-0', config.color)}>
+      <span className={cn('mt-0.5 flex-shrink-0', config.color)}>
         <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+      </span>
+      <span className="min-w-0 flex-1 flex flex-col">
+        <span className="flex items-center gap-2">
           <span className={cn('text-xs font-medium', config.color)}>{config.label}</span>
           {metadata?.number && (
             <span className="text-muted-foreground text-xs">#{metadata.number}</span>
@@ -189,15 +190,15 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
               {metadata.status}
             </span>
           )}
-        </div>
-        <h4 className="mt-0.5 truncate font-medium">{title}</h4>
+        </span>
+        <span className="mt-0.5 truncate font-medium">{title}</span>
         {description && (
-          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">{description}</p>
+          <span className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">{description}</span>
         )}
         {metadata?.author && (
-          <p className="text-muted-foreground mt-1 text-xs">by {metadata.author}</p>
+          <span className="text-muted-foreground mt-1 text-xs">by {metadata.author}</span>
         )}
-      </div>
+      </span>
       <ExternalLink className="text-muted-foreground h-4 w-4 flex-shrink-0" />
     </a>
   );
