@@ -7,15 +7,13 @@ export class JiraConnector implements Connector<'jira'> {
   name = 'Jira';
 
   private client: JiraClient;
-  private host: string;
 
   constructor(config: JiraConfig) {
     this.client = new JiraClient(config);
-    this.host = config.host.replace(/^https?:\/\//, '').replace(/\/$/, '');
   }
 
   getTools() {
-    return createJiraTools(this.client, this.host);
+    return createJiraTools(this.client);
   }
 
   async testConnection(): Promise<ConnectionTestResult> {

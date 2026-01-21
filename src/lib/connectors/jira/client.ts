@@ -2,14 +2,20 @@ import type { JiraConfig } from '../types';
 
 // Jira API client
 export class JiraClient {
-  private host: string;
+  private config: JiraConfig;
   private auth: string;
+  public host: string;
 
   constructor(config: JiraConfig) {
+    this.config = config;
     // Ensure host doesn't have protocol or trailing slash
     this.host = config.host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     // Base64 encode email:apiToken for basic auth
     this.auth = Buffer.from(`${config.email}:${config.apiToken}`).toString('base64');
+  }
+
+  hasCredentials(): boolean {
+    return !!(this.config.host && this.config.email && this.config.apiToken);
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -39,7 +45,7 @@ export class JiraClient {
     return this.request('/myself');
   }
 
-  // Search issues using JQL
+  // Search issues using JQL (uses new /search/jql endpoint)
   async searchIssues(jql: string, limit = 50): Promise<JiraSearchResult> {
     const params = new URLSearchParams({
       jql,
@@ -48,7 +54,7 @@ export class JiraClient {
         'summary,status,priority,assignee,reporter,created,updated,description,issuetype,labels,project',
     });
 
-    return this.request(`/search?${params.toString()}`);
+    return this.request(`/search/jql?${params.toString()}`);
   }
 
   // Get issue details
@@ -101,6 +107,11 @@ export class JiraClient {
   async getSprintIssues(sprintId: number): Promise<JiraSearchResult> {
     return this.searchIssues(`sprint = ${sprintId}`);
   }
+
+  // List all accessible projects
+  async listProjects(): Promise<JiraProjectDetail[]> {
+    return this.request('/project');
+  }
 }
 
 // Jira API types
@@ -140,6 +151,14 @@ export interface JiraProject {
   name: string;
 }
 
+export interface JiraProjectDetail {
+  id: string;
+  key: string;
+  name: string;
+  projectTypeKey: string;
+  avatarUrls?: Record<string, string>;
+}
+
 export interface JiraIssueFields {
   summary: string;
   description?: {
@@ -168,10 +187,13 @@ export interface JiraIssue {
 }
 
 export interface JiraSearchResult {
-  startAt: number;
-  maxResults: number;
-  total: number;
   issues: JiraIssue[];
+  nextPageToken?: string;
+  isLast?: boolean;
+  // Legacy fields (deprecated)
+  startAt?: number;
+  maxResults?: number;
+  total?: number;
 }
 
 export interface JiraComment {
