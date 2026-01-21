@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { getConnectorMetadata, getAllConnectorMetadata } from '@/lib/connectors';
+import { getConnectorMetadata, getAllConnectorMetadata, getEnabledConnectors } from '@/lib/connectors';
 import type { ConnectorType } from '@/types';
 
 const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
@@ -23,10 +23,10 @@ const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the us
 7. **Be concise but thorough** — Default to concise answers, but be comprehensive when the user asks for details.`;
 
 export async function buildSystemPrompt(): Promise<string> {
-  const [settings, userContext, connectors] = await Promise.all([
+  const [settings, userContext, enabledConnectors] = await Promise.all([
     db.settings.findUnique({ where: { id: 'singleton' } }),
     db.userContext.findUnique({ where: { id: 'singleton' } }),
-    db.connector.findMany({ where: { enabled: true } }),
+    getEnabledConnectors(), // This checks both DB and environment variables
   ]);
 
   const parts: string[] = [BASE_SYSTEM_PROMPT];
@@ -42,13 +42,13 @@ export async function buildSystemPrompt(): Promise<string> {
   }
 
   // Add enabled connectors list with descriptions
-  if (connectors.length > 0) {
-    const connectorList = connectors.map((c) => {
+  if (enabledConnectors.length > 0) {
+    const connectorList = enabledConnectors.map((c) => {
       const metadata = getConnectorMetadata(c.type as ConnectorType);
       const description = metadata?.description || '';
       return `- **${c.name}** (${c.type})${description ? ` — ${description}` : ''}`;
     }).join('\n');
-    parts.push(`\n## Available Connectors\n\nYou have access to ${connectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`);
+    parts.push(`\n## Available Connectors\n\nYou have access to ${enabledConnectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`);
   } else {
     // List available connector types that can be configured
     const allMetadata = getAllConnectorMetadata();
