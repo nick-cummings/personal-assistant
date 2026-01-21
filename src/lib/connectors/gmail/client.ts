@@ -1,163 +1,250 @@
-import {
-  OAuthClient,
-  buildOAuthAuthUrl,
-  exchangeOAuthCode,
-  type OAuthConfig,
-  type OAuthProviderConfig,
-  type TokenResponse,
-} from '../shared/oauth-client';
+import { ImapFlow } from 'imapflow';
+import { simpleParser, type ParsedMail } from 'mailparser';
 
-// Gmail API response types
-interface GmailMessage {
+export interface GmailImapConfig {
+  email: string;
+  appPassword: string;
+}
+
+export interface GmailEmail {
   id: string;
-  threadId: string;
-  labelIds: string[];
+  subject: string;
+  from: string;
+  to: string[];
+  date: string;
   snippet: string;
-  payload: {
-    headers: Array<{
-      name: string;
-      value: string;
-    }>;
-    mimeType: string;
-    body?: {
-      size: number;
-      data?: string;
-    };
-    parts?: Array<{
-      mimeType: string;
-      body?: {
-        size: number;
-        data?: string;
-      };
-    }>;
-  };
-  internalDate: string;
+  body?: string;
+  isRead: boolean;
+  hasAttachments: boolean;
+  labels: string[];
 }
 
-interface GmailMessageList {
-  messages?: Array<{
-    id: string;
-    threadId: string;
-  }>;
-  nextPageToken?: string;
-  resultSizeEstimate: number;
-}
-
-interface GmailLabel {
+export interface GmailLabel {
   id: string;
   name: string;
-  messageListVisibility?: string;
-  labelListVisibility?: string;
-  type: string;
-  messagesTotal?: number;
-  messagesUnread?: number;
+  messageCount: number;
+  unreadCount: number;
 }
 
-const GMAIL_PROVIDER_CONFIG: OAuthProviderConfig = {
-  connectorType: 'gmail',
-  tokenUrl: 'https://oauth2.googleapis.com/token',
-  apiBaseUrl: 'https://gmail.googleapis.com/gmail/v1',
-  scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
-  authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-  errorPrefix: 'Gmail API error',
-  authRoute: 'gmail',
-};
+export class GmailImapClient {
+  private config: GmailImapConfig;
 
-export class GmailClient extends OAuthClient<OAuthConfig> {
-  protected getProviderConfig(): OAuthProviderConfig {
-    return GMAIL_PROVIDER_CONFIG;
+  constructor(config: GmailImapConfig) {
+    this.config = config;
   }
 
-  async searchEmails(query: string, maxResults: number = 20): Promise<GmailMessage[]> {
-    // First get message IDs
-    const listResponse = await this.fetch<GmailMessageList>(
-      `/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${maxResults}`
-    );
-
-    if (!listResponse.messages || listResponse.messages.length === 0) {
-      return [];
-    }
-
-    // Then fetch full message details for each
-    const messages: GmailMessage[] = [];
-    for (const msg of listResponse.messages) {
-      const fullMessage = await this.fetch<GmailMessage>(
-        `/users/me/messages/${msg.id}?format=full`
-      );
-      messages.push(fullMessage);
-    }
-
-    return messages;
+  hasCredentials(): boolean {
+    return !!(this.config.email && this.config.appPassword);
   }
 
-  async getEmail(messageId: string): Promise<GmailMessage> {
-    return this.fetch<GmailMessage>(`/users/me/messages/${messageId}?format=full`);
+  private createClient(): ImapFlow {
+    return new ImapFlow({
+      host: 'imap.gmail.com',
+      port: 993,
+      secure: true,
+      auth: {
+        user: this.config.email,
+        pass: this.config.appPassword,
+      },
+      logger: false,
+    });
+  }
+
+  async searchEmails(query: string, maxResults: number = 20): Promise<GmailEmail[]> {
+    const client = this.createClient();
+    const emails: GmailEmail[] = [];
+
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock('[Gmail]/All Mail');
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let searchCriteria: any = { all: true };
+
+        if (query) {
+          // IMAP TEXT search includes subject and body
+          searchCriteria = { text: query };
+        }
+
+        const searchResult = await client.search(searchCriteria, { uid: true });
+
+        if (!searchResult || !Array.isArray(searchResult) || searchResult.length === 0) {
+          return [];
+        }
+
+        // Get the most recent messages (last N)
+        const recentUids = searchResult.slice(-maxResults).reverse();
+
+        for (const uid of recentUids) {
+          const message = await client.fetchOne(String(uid), {
+            envelope: true,
+            flags: true,
+            bodyStructure: true,
+            source: true,
+            labels: true,
+          }, { uid: true });
+
+          if (message && message.source) {
+            const parsed = await simpleParser(message.source);
+            emails.push(this.parseMessage(String(uid), message, parsed));
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
+    }
+
+    return emails;
+  }
+
+  async getEmail(messageId: string): Promise<GmailEmail> {
+    const client = this.createClient();
+
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock('[Gmail]/All Mail');
+
+      try {
+        const message = await client.fetchOne(messageId, {
+          envelope: true,
+          flags: true,
+          bodyStructure: true,
+          source: true,
+          labels: true,
+        }, { uid: true });
+
+        if (!message || !message.source) {
+          throw new Error('Message not found');
+        }
+
+        const parsed = await simpleParser(message.source);
+        return this.parseMessage(messageId, message, parsed, true);
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
+    }
   }
 
   async listLabels(): Promise<GmailLabel[]> {
-    const response = await this.fetch<{ labels: GmailLabel[] }>('/users/me/labels');
-    return response.labels;
+    const client = this.createClient();
+    const labels: GmailLabel[] = [];
+
+    try {
+      await client.connect();
+      const mailboxes = await client.list();
+
+      for (const mailbox of mailboxes) {
+        try {
+          const status = await client.status(mailbox.path, {
+            messages: true,
+            unseen: true,
+          });
+
+          labels.push({
+            id: mailbox.path,
+            name: mailbox.name,
+            messageCount: status.messages || 0,
+            unreadCount: status.unseen || 0,
+          });
+        } catch {
+          // Some folders might not be accessible
+          labels.push({
+            id: mailbox.path,
+            name: mailbox.name,
+            messageCount: 0,
+            unreadCount: 0,
+          });
+        }
+      }
+    } finally {
+      await client.logout();
+    }
+
+    return labels;
+  }
+
+  async getEmailsInFolder(folderId: string, maxResults: number = 20): Promise<GmailEmail[]> {
+    const client = this.createClient();
+    const emails: GmailEmail[] = [];
+
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock(folderId);
+
+      try {
+        const status = await client.status(folderId, { messages: true });
+        const totalMessages = status.messages || 0;
+
+        if (totalMessages === 0) {
+          return [];
+        }
+
+        // Get the most recent messages
+        const startSeq = Math.max(1, totalMessages - maxResults + 1);
+        const range = `${startSeq}:*`;
+
+        for await (const message of client.fetch(range, {
+          envelope: true,
+          flags: true,
+          bodyStructure: true,
+          source: true,
+          labels: true,
+        })) {
+          if (message.source) {
+            const parsed = await simpleParser(message.source);
+            emails.push(this.parseMessage(String(message.uid), message, parsed));
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
+    }
+
+    return emails.reverse(); // Most recent first
+  }
+
+  private parseMessage(
+    uid: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    message: any,
+    parsed: ParsedMail,
+    includeBody: boolean = false
+  ): GmailEmail {
+    const envelope = message.envelope || {};
+    const flags = message.flags || new Set();
+    const labels = message.labels || [];
+
+    const from = envelope.from?.[0];
+    const to = envelope.to || [];
+
+    return {
+      id: uid,
+      subject: envelope.subject || '(No Subject)',
+      from: from ? `${from.name || ''} <${from.address || ''}>`.trim() : 'Unknown',
+      to: to.map((t: { name?: string; address?: string }) => `${t.name || ''} <${t.address || ''}>`.trim()),
+      date: envelope.date?.toISOString() || new Date().toISOString(),
+      snippet: (parsed.text || '').substring(0, 200),
+      body: includeBody ? (parsed.text || parsed.html || '') : undefined,
+      isRead: flags.has('\\Seen'),
+      hasAttachments: (parsed.attachments?.length || 0) > 0,
+      labels: Array.isArray(labels) ? labels : [],
+    };
   }
 
   async testConnection(): Promise<void> {
-    await this.fetch('/users/me/profile');
-  }
-
-  // Helper to extract header value
-  static getHeader(message: GmailMessage, name: string): string | undefined {
-    const header = message.payload.headers.find(
-      (h) => h.name.toLowerCase() === name.toLowerCase()
-    );
-    return header?.value;
-  }
-
-  // Helper to decode base64url encoded content
-  static decodeBody(data: string): string {
-    // Gmail uses URL-safe base64 encoding
-    const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
-    return Buffer.from(base64, 'base64').toString('utf-8');
-  }
-
-  // Helper to get plain text body from message
-  static getPlainTextBody(message: GmailMessage): string {
-    // Try to find text/plain part
-    if (message.payload.parts) {
-      const textPart = message.payload.parts.find((p) => p.mimeType === 'text/plain');
-      if (textPart?.body?.data) {
-        return GmailClient.decodeBody(textPart.body.data);
-      }
-      // Fall back to html and strip tags
-      const htmlPart = message.payload.parts.find((p) => p.mimeType === 'text/html');
-      if (htmlPart?.body?.data) {
-        const html = GmailClient.decodeBody(htmlPart.body.data);
-        return html
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      }
+    const client = this.createClient();
+    try {
+      await client.connect();
+      // Just connecting successfully means credentials are valid
+    } finally {
+      await client.logout();
     }
-    // Single part message
-    if (message.payload.body?.data) {
-      return GmailClient.decodeBody(message.payload.body.data);
-    }
-    return message.snippet;
   }
-}
-
-// Helper function to build OAuth authorization URL
-export function getGmailAuthUrl(config: OAuthConfig, redirectUri: string): string {
-  return buildOAuthAuthUrl(config, redirectUri, GMAIL_PROVIDER_CONFIG, {
-    state: 'gmail_auth',
-  });
-}
-
-// Helper function to exchange auth code for tokens
-export async function exchangeGmailCode(
-  config: OAuthConfig,
-  code: string,
-  redirectUri: string
-): Promise<TokenResponse> {
-  return exchangeOAuthCode(config, code, redirectUri, GMAIL_PROVIDER_CONFIG.tokenUrl);
 }

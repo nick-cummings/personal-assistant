@@ -1,15 +1,15 @@
-import { YahooClient } from './client';
+import { YahooImapClient, type YahooImapConfig } from './client';
 import { createYahooTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, YahooConfig } from '../types';
+import type { Connector, ConnectionTestResult, ToolSet } from '../types';
 
 export class YahooConnector implements Connector<'yahoo'> {
   type = 'yahoo' as const;
   name = 'Yahoo Mail';
 
-  private client: YahooClient;
+  private client: YahooImapClient;
 
-  constructor(config: YahooConfig) {
-    this.client = new YahooClient(config);
+  constructor(config: YahooImapConfig) {
+    this.client = new YahooImapClient(config);
   }
 
   getTools(): ToolSet {
@@ -18,24 +18,16 @@ export class YahooConnector implements Connector<'yahoo'> {
 
   async testConnection(): Promise<ConnectionTestResult> {
     try {
-      // Check if OAuth is set up
-      if (!this.client.hasRefreshToken()) {
-        return {
-          success: false,
-          error: 'OAuth not completed. Please visit /api/auth/yahoo to authorize.',
-        };
-      }
-
       await this.client.testConnection();
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Failed to connect to Yahoo Mail',
       };
     }
   }
 }
 
-export { YahooClient, getYahooAuthUrl, exchangeYahooCode } from './client';
+export { YahooImapClient, type YahooImapConfig } from './client';
 export { createYahooTools } from './tools';

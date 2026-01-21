@@ -1,15 +1,15 @@
-import { GmailClient } from './client';
+import { GmailImapClient, type GmailImapConfig } from './client';
 import { createGmailTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GmailConfig } from '../types';
+import type { Connector, ConnectionTestResult, ToolSet } from '../types';
 
 export class GmailConnector implements Connector<'gmail'> {
   type = 'gmail' as const;
   name = 'Gmail';
 
-  private client: GmailClient;
+  private client: GmailImapClient;
 
-  constructor(config: GmailConfig) {
-    this.client = new GmailClient(config);
+  constructor(config: GmailImapConfig) {
+    this.client = new GmailImapClient(config);
   }
 
   getTools(): ToolSet {
@@ -18,11 +18,10 @@ export class GmailConnector implements Connector<'gmail'> {
 
   async testConnection(): Promise<ConnectionTestResult> {
     try {
-      // Check if OAuth is set up
-      if (!this.client.hasRefreshToken()) {
+      if (!this.client.hasCredentials()) {
         return {
           success: false,
-          error: 'OAuth not completed. Please visit /api/auth/gmail to authorize.',
+          error: 'Gmail not configured. Please add your email and app password.',
         };
       }
 
@@ -31,11 +30,11 @@ export class GmailConnector implements Connector<'gmail'> {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Failed to connect to Gmail',
       };
     }
   }
 }
 
-export { GmailClient, getGmailAuthUrl, exchangeGmailCode } from './client';
+export { GmailImapClient, type GmailImapConfig } from './client';
 export { createGmailTools } from './tools';

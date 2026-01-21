@@ -1,14 +1,13 @@
-import {
-  OAuthClient,
-  exchangeOAuthCodeWithBasicAuth,
-  type OAuthConfig,
-  type OAuthProviderConfig,
-  type TokenResponse,
-} from '../shared/oauth-client';
+import { ImapFlow } from 'imapflow';
+import { simpleParser, type ParsedMail } from 'mailparser';
 
-interface YahooEmail {
+export interface YahooImapConfig {
+  email: string;
+  appPassword: string;
+}
+
+export interface YahooEmail {
   id: string;
-  threadId?: string;
   subject: string;
   from: string;
   to: string[];
@@ -19,159 +18,231 @@ interface YahooEmail {
   hasAttachments: boolean;
 }
 
-interface YahooFolder {
+export interface YahooFolder {
   id: string;
   name: string;
   messageCount: number;
   unreadCount: number;
 }
 
-const YAHOO_PROVIDER_CONFIG: OAuthProviderConfig = {
-  connectorType: 'yahoo',
-  tokenUrl: 'https://api.login.yahoo.com/oauth2/get_token',
-  apiBaseUrl: 'https://api.mail.yahoo.com/ws/mail/v3.0',
-  scopes: ['mail-r'],
-  authUrl: 'https://api.login.yahoo.com/oauth2/request_auth',
-  errorPrefix: 'Yahoo API error',
-  authRoute: 'yahoo',
-};
+export class YahooImapClient {
+  private config: YahooImapConfig;
 
-export class YahooClient extends OAuthClient<OAuthConfig> {
-  protected getProviderConfig(): OAuthProviderConfig {
-    return YAHOO_PROVIDER_CONFIG;
+  constructor(config: YahooImapConfig) {
+    this.config = config;
   }
 
-  // Yahoo uses Basic auth for token refresh
-  protected useBasicAuth(): boolean {
-    return true;
+  hasCredentials(): boolean {
+    return !!(this.config.email && this.config.appPassword);
+  }
+
+  private createClient(): ImapFlow {
+    return new ImapFlow({
+      host: 'imap.mail.yahoo.com',
+      port: 993,
+      secure: true,
+      auth: {
+        user: this.config.email,
+        pass: this.config.appPassword,
+      },
+      logger: false,
+    });
   }
 
   async searchEmails(query: string, maxResults: number = 20): Promise<YahooEmail[]> {
-    const params = new URLSearchParams({
-      query,
-      count: maxResults.toString(),
-    });
+    const client = this.createClient();
+    const emails: YahooEmail[] = [];
 
-    const response = await this.fetch<{ messages?: Array<Record<string, unknown>> }>(
-      `/messages/search?${params.toString()}`
-    );
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock('INBOX');
 
-    if (!response.messages) {
-      return [];
+      try {
+        // Search for messages - IMAP search syntax
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let searchCriteria: any = { all: true };
+
+        if (query) {
+          // Search in subject (IMAP TEXT search includes subject and body)
+          searchCriteria = { text: query };
+        }
+
+        const searchResult = await client.search(searchCriteria, { uid: true });
+
+        // Handle the case where search returns no messages
+        if (!searchResult || !Array.isArray(searchResult) || searchResult.length === 0) {
+          return [];
+        }
+
+        const messages = searchResult;
+
+        // Get the most recent messages (last N)
+        const recentUids = messages.slice(-maxResults).reverse();
+
+        for (const uid of recentUids) {
+          const message = await client.fetchOne(String(uid), {
+            envelope: true,
+            flags: true,
+            bodyStructure: true,
+            source: true,
+          }, { uid: true });
+
+          if (message && message.source) {
+            const parsed = await simpleParser(message.source);
+            emails.push(this.parseMessage(String(uid), message, parsed));
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
     }
 
-    return response.messages.map((msg) => this.parseMessage(msg));
+    return emails;
   }
 
   async getEmail(messageId: string): Promise<YahooEmail> {
-    const response = await this.fetch<{ message: Record<string, unknown> }>(
-      `/messages/${messageId}`
-    );
+    const client = this.createClient();
 
-    return this.parseMessage(response.message, true);
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock('INBOX');
+
+      try {
+        const message = await client.fetchOne(messageId, {
+          envelope: true,
+          flags: true,
+          bodyStructure: true,
+          source: true,
+        }, { uid: true });
+
+        if (!message || !message.source) {
+          throw new Error('Message not found');
+        }
+
+        const parsed = await simpleParser(message.source);
+        return this.parseMessage(messageId, message, parsed, true);
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
+    }
   }
 
   async listFolders(): Promise<YahooFolder[]> {
-    const response = await this.fetch<{ folders?: Array<Record<string, unknown>> }>(
-      '/folders'
-    );
+    const client = this.createClient();
+    const folders: YahooFolder[] = [];
 
-    if (!response.folders) {
-      return [];
+    try {
+      await client.connect();
+      const mailboxes = await client.list();
+
+      for (const mailbox of mailboxes) {
+        try {
+          const status = await client.status(mailbox.path, {
+            messages: true,
+            unseen: true,
+          });
+
+          folders.push({
+            id: mailbox.path,
+            name: mailbox.name,
+            messageCount: status.messages || 0,
+            unreadCount: status.unseen || 0,
+          });
+        } catch {
+          // Some folders might not be accessible
+          folders.push({
+            id: mailbox.path,
+            name: mailbox.name,
+            messageCount: 0,
+            unreadCount: 0,
+          });
+        }
+      }
+    } finally {
+      await client.logout();
     }
 
-    return response.folders.map((folder) => ({
-      id: String(folder.folderId || folder.id || ''),
-      name: String(folder.name || 'Unknown'),
-      messageCount: Number(folder.total || 0),
-      unreadCount: Number(folder.unseen || 0),
-    }));
+    return folders;
   }
 
   async getEmailsInFolder(folderId: string, maxResults: number = 20): Promise<YahooEmail[]> {
-    const params = new URLSearchParams({
-      count: maxResults.toString(),
-    });
+    const client = this.createClient();
+    const emails: YahooEmail[] = [];
 
-    const response = await this.fetch<{ messages?: Array<Record<string, unknown>> }>(
-      `/folders/${folderId}/messages?${params.toString()}`
-    );
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock(folderId);
 
-    if (!response.messages) {
-      return [];
+      try {
+        const status = await client.status(folderId, { messages: true });
+        const totalMessages = status.messages || 0;
+
+        if (totalMessages === 0) {
+          return [];
+        }
+
+        // Get the most recent messages
+        const startSeq = Math.max(1, totalMessages - maxResults + 1);
+        const range = `${startSeq}:*`;
+
+        for await (const message of client.fetch(range, {
+          envelope: true,
+          flags: true,
+          bodyStructure: true,
+          source: true,
+        })) {
+          if (message.source) {
+            const parsed = await simpleParser(message.source);
+            emails.push(this.parseMessage(String(message.uid), message, parsed));
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await client.logout();
     }
 
-    return response.messages.map((msg) => this.parseMessage(msg));
+    return emails.reverse(); // Most recent first
   }
 
-  private parseMessage(msg: Record<string, unknown>, includeBody: boolean = false): YahooEmail {
-    const headers = (msg.headers || {}) as Record<string, unknown>;
-    const from = headers.from as { email?: string; name?: string } | undefined;
-    const to = (headers.to || []) as Array<{ email?: string; name?: string }>;
+  private parseMessage(
+    uid: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    message: any,
+    parsed: ParsedMail,
+    includeBody: boolean = false
+  ): YahooEmail {
+    const envelope = message.envelope || {};
+    const flags = message.flags || new Set();
+
+    const from = envelope.from?.[0];
+    const to = envelope.to || [];
 
     return {
-      id: String(msg.messageId || msg.id || ''),
-      threadId: msg.threadId as string | undefined,
-      subject: String(headers.subject || '(No Subject)'),
-      from: from ? `${from.name || ''} <${from.email || ''}>`.trim() : 'Unknown',
-      to: to.map((t) => `${t.name || ''} <${t.email || ''}>`.trim()),
-      date: String(headers.date || msg.receivedDate || ''),
-      snippet: String(msg.snippet || ''),
-      body: includeBody ? this.extractBody(msg) : undefined,
-      isRead: Boolean(msg.read || msg.isRead),
-      hasAttachments: Boolean(msg.hasAttachment || (msg.attachments as unknown[])?.length > 0),
+      id: uid,
+      subject: envelope.subject || '(No Subject)',
+      from: from ? `${from.name || ''} <${from.address || ''}>`.trim() : 'Unknown',
+      to: to.map((t: { name?: string; address?: string }) => `${t.name || ''} <${t.address || ''}>`.trim()),
+      date: envelope.date?.toISOString() || new Date().toISOString(),
+      snippet: (parsed.text || '').substring(0, 200),
+      body: includeBody ? (parsed.text || parsed.html || '') : undefined,
+      isRead: flags.has('\\Seen'),
+      hasAttachments: (parsed.attachments?.length || 0) > 0,
     };
   }
 
-  private extractBody(msg: Record<string, unknown>): string {
-    const parts = msg.parts as Array<{ mimeType?: string; body?: { data?: string } }> | undefined;
-
-    if (!parts || parts.length === 0) {
-      const body = msg.body as { data?: string } | string | undefined;
-      if (typeof body === 'string') return body;
-      if (body?.data) return Buffer.from(body.data, 'base64').toString('utf-8');
-      return '';
-    }
-
-    // Prefer plain text, then HTML
-    const textPart = parts.find((p) => p.mimeType === 'text/plain');
-    const htmlPart = parts.find((p) => p.mimeType === 'text/html');
-
-    const part = textPart || htmlPart;
-    if (part?.body?.data) {
-      return Buffer.from(part.body.data, 'base64').toString('utf-8');
-    }
-
-    return '';
-  }
-
   async testConnection(): Promise<void> {
-    await this.listFolders();
+    const client = this.createClient();
+    try {
+      await client.connect();
+      // Just connecting successfully means credentials are valid
+    } finally {
+      await client.logout();
+    }
   }
-}
-
-// Helper function to build OAuth authorization URL
-export function getYahooAuthUrl(config: OAuthConfig, redirectUri: string): string {
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: YAHOO_PROVIDER_CONFIG.scopes.join(' '),
-  });
-
-  return `${YAHOO_PROVIDER_CONFIG.authUrl}?${params.toString()}`;
-}
-
-// Helper function to exchange auth code for tokens
-export async function exchangeYahooCode(
-  config: OAuthConfig,
-  code: string,
-  redirectUri: string
-): Promise<TokenResponse> {
-  return exchangeOAuthCodeWithBasicAuth(
-    config,
-    code,
-    redirectUri,
-    YAHOO_PROVIDER_CONFIG.tokenUrl
-  );
 }
