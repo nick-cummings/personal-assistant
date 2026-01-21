@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,9 +26,10 @@ import { Input } from '@/components/ui/input';
 import { useUpdateChat, useDeleteChat, useForkChat, useArchiveChat } from '@/hooks/use-chats';
 import { useAppStore } from '@/stores/app-store';
 import type { Chat } from '@/types';
+import type { DragItem } from './dnd-context';
 
 interface ChatListItemProps {
-  chat: Chat & { archived?: boolean };
+  chat: Chat & { archived?: boolean; folderId?: string | null };
   isActive?: boolean;
 }
 
@@ -42,6 +44,18 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
+
+  const dragData: DragItem = {
+    id: chat.id,
+    type: 'chat',
+    title: chat.title,
+    parentId: chat.folderId,
+  };
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `chat-${chat.id}`,
+    data: dragData,
+  });
 
   const handleClick = () => {
     setSelectedChat(chat.id);
@@ -93,16 +107,25 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
   return (
     <TooltipProvider>
       <div
+        ref={setNodeRef}
         className={cn(
-          'group hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm min-w-0',
-          isActive && 'bg-accent'
+          'group hover:bg-accent flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm min-w-0',
+          isActive && 'bg-accent',
+          isDragging && 'opacity-50'
         )}
         onClick={handleClick}
       >
+        <div
+          className="cursor-grab opacity-0 group-hover:opacity-100 touch-none"
+          {...listeners}
+          {...attributes}
+        >
+          <GripVertical className="h-3 w-3 text-muted-foreground" />
+        </div>
         <MessageSquare className="text-muted-foreground h-4 w-4 flex-shrink-0" />
         <span
-          className="overflow-hidden text-ellipsis whitespace-nowrap"
-          style={{ maxWidth: '160px' }}
+          className="overflow-hidden text-ellipsis whitespace-nowrap flex-1"
+          style={{ maxWidth: '140px' }}
           title={chat.title}
         >
           {chat.title}

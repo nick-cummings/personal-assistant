@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import {
   ChevronRight,
   Folder,
@@ -10,6 +11,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  GripVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ import { ChatListItem } from './chat-list-item';
 import { useCreateFolder, useUpdateFolder, useDeleteFolder } from '@/hooks/use-folders';
 import { useCreateChat } from '@/hooks/use-chats';
 import { useAppStore } from '@/stores/app-store';
+import { useSidebarDnd, type DragItem } from './dnd-context';
 import type { FolderWithChildren } from '@/types';
 
 interface FolderTreeItemProps {
@@ -46,6 +49,7 @@ export function FolderTreeItem({ folder, level = 0 }: FolderTreeItemProps) {
   const params = useParams();
   const activeChatId = params?.chatId as string | undefined;
   const { searchQuery } = useAppStore();
+  const { activeItem } = useSidebarDnd();
 
   const createFolder = useCreateFolder();
   const updateFolder = useUpdateFolder();
@@ -58,6 +62,42 @@ export function FolderTreeItem({ folder, level = 0 }: FolderTreeItemProps) {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newName, setNewName] = useState(folder.name);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Make folder draggable
+  const dragData: DragItem = {
+    id: folder.id,
+    type: 'folder',
+    title: folder.name,
+    parentId: folder.parentId,
+  };
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: `folder-${folder.id}`,
+    data: dragData,
+  });
+
+  // Make folder droppable
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: folder.id,
+    data: { type: 'folder', folderId: folder.id },
+  });
+
+  // Combine refs
+  const setNodeRef = (node: HTMLElement | null) => {
+    setDragRef(node);
+    setDropRef(node);
+  };
+
+  // Check if this folder can accept the current drag item
+  const canAcceptDrop = activeItem && (
+    activeItem.type === 'chat' ||
+    (activeItem.type === 'folder' && activeItem.id !== folder.id)
+  );
 
   // Filter chats by search query
   const filteredChats = folder.chats.filter((chat) =>
@@ -106,9 +146,21 @@ export function FolderTreeItem({ folder, level = 0 }: FolderTreeItemProps) {
     <TooltipProvider>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div
-          className="group hover:bg-accent flex items-center gap-1 rounded-md px-2 py-1.5 text-sm"
+          ref={setNodeRef}
+          className={cn(
+            'group hover:bg-accent flex items-center gap-1 rounded-md px-2 py-1.5 text-sm',
+            isDragging && 'opacity-50',
+            isOver && canAcceptDrop && 'bg-accent ring-2 ring-primary ring-inset'
+          )}
           style={{ paddingLeft: `${level * 12 + 8}px` }}
         >
+          <div
+            className="cursor-grab opacity-0 group-hover:opacity-100 touch-none"
+            {...listeners}
+            {...attributes}
+          >
+            <GripVertical className="h-3 w-3 text-muted-foreground" />
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <CollapsibleTrigger asChild>
@@ -253,7 +305,36 @@ export function FolderTreeItem({ folder, level = 0 }: FolderTreeItemProps) {
 
 interface FolderTreeProps {
   folders: FolderWithChildren[];
-  unfiledChats?: { id: string; title: string; createdAt: Date; updatedAt: Date }[];
+  unfiledChats?: { id: string; title: string; createdAt: Date; updatedAt: Date; folderId?: string | null }[];
+}
+
+function UnfiledDropZone({ children }: { children: React.ReactNode }) {
+  const { activeItem } = useSidebarDnd();
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'unfiled-root',
+    data: { type: 'root', folderId: null },
+  });
+
+  const canAcceptDrop = activeItem && (
+    activeItem.type === 'chat' || activeItem.type === 'folder'
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'mt-2 px-2 min-h-[32px] rounded-md transition-colors',
+        isOver && canAcceptDrop && 'bg-accent ring-2 ring-primary ring-inset'
+      )}
+    >
+      {children}
+      {isOver && canAcceptDrop && (
+        <div className="text-xs text-muted-foreground py-1 text-center">
+          Drop here to remove from folder
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function FolderTree({ folders, unfiledChats = [] }: FolderTreeProps) {
@@ -272,14 +353,12 @@ export function FolderTree({ folders, unfiledChats = [] }: FolderTreeProps) {
         <FolderTreeItem key={folder.id} folder={folder} />
       ))}
 
-      {/* Unfiled chats */}
-      {filteredUnfiledChats.length > 0 && (
-        <div className="mt-2 px-2">
-          {filteredUnfiledChats.map((chat) => (
-            <ChatListItem key={chat.id} chat={chat as any} isActive={chat.id === activeChatId} />
-          ))}
-        </div>
-      )}
+      {/* Unfiled chats - droppable area */}
+      <UnfiledDropZone>
+        {filteredUnfiledChats.map((chat) => (
+          <ChatListItem key={chat.id} chat={chat as any} isActive={chat.id === activeChatId} />
+        ))}
+      </UnfiledDropZone>
     </div>
   );
 }
