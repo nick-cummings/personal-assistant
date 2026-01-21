@@ -66,11 +66,17 @@ export interface OutlookConfig extends BaseConnectorConfig {
 export type { OAuthConfig } from './shared/oauth-client';
 import type { OAuthConfig } from './shared/oauth-client';
 
-// Gmail connector config (Google OAuth)
-export type GmailConfig = OAuthConfig;
+// Gmail connector config (IMAP with App Password)
+export interface GmailConfig extends BaseConnectorConfig {
+  email: string;
+  appPassword: string;
+}
 
-// Yahoo Mail connector config (Yahoo OAuth)
-export type YahooConfig = OAuthConfig;
+// Yahoo Mail connector config (IMAP with App Password)
+export interface YahooConfig extends BaseConnectorConfig {
+  email: string;
+  appPassword: string;
+}
 
 // Google Drive connector config (Google OAuth)
 export type GoogleDriveConfig = OAuthConfig;

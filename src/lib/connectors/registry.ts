@@ -502,103 +502,80 @@ Once connected, the assistant can:
     description: 'Search and read emails from Gmail',
     configFields: [
       {
-        key: 'clientId',
-        label: 'Client ID',
-        type: 'text',
-        placeholder: 'Your Google Cloud OAuth client ID',
+        key: 'email',
+        label: 'Gmail Address',
+        type: 'email',
+        placeholder: 'you@gmail.com',
         required: true,
-        helpText: 'Create in Google Cloud Console > APIs & Services > Credentials',
+        helpText: 'Your Gmail email address',
       },
       {
-        key: 'clientSecret',
-        label: 'Client Secret',
+        key: 'appPassword',
+        label: 'App Password',
         type: 'password',
-        placeholder: 'Your client secret',
+        placeholder: 'Your Google app password',
         required: true,
+        helpText: 'Generate at Google Account Security settings',
       },
     ],
     setupInstructions: `# Gmail Connector Setup
 
 ## Prerequisites
-- A Google account
-- Access to Google Cloud Console
+- A Google account with 2-Step Verification enabled
 
-## Step 1: Create a Google Cloud Project
+## Step 1: Enable 2-Step Verification (if not already enabled)
 
-1. Go to https://console.cloud.google.com
-2. Click the project dropdown (top left) → **New Project**
-3. Enter a project name (e.g., "Personal Assistant")
-4. Click **Create**
-5. Select your new project from the dropdown
+1. Go to https://myaccount.google.com/security
+2. Sign in to your Google account
+3. Under "How you sign in to Google", click **2-Step Verification**
+4. Follow the prompts to set up 2-step verification using your phone
 
-## Step 2: Enable the Gmail API
+## Step 2: Generate an App Password
 
-1. Go to **APIs & Services** → **Library**
-2. Search for "Gmail API"
-3. Click **Gmail API**
-4. Click **Enable**
+1. Go to https://myaccount.google.com/apppasswords
+2. Sign in if prompted
+3. Select **Mail** from the "Select app" dropdown
+4. Select **Other (Custom name)** from the "Select device" dropdown
+5. Enter a name like "Personal Assistant"
+6. Click **Generate**
+7. **Copy the 16-character password** that appears
+   - It will look like: \`abcd efgh ijkl mnop\`
+   - Copy it without spaces: \`abcdefghijklmnop\`
 
-## Step 3: Configure OAuth Consent Screen
+## Step 3: Configure the Connector
 
-1. Go to **APIs & Services** → **OAuth consent screen**
-2. Select **External** (or Internal if using Google Workspace)
-3. Click **Create**
-4. Fill in the required fields:
-   - **App name**: Personal Assistant
-   - **User support email**: Your email
-   - **Developer contact email**: Your email
-5. Click **Save and Continue**
-6. On the **Scopes** page:
-   - Click **Add or Remove Scopes**
-   - Add these scopes:
-     - \`https://www.googleapis.com/auth/gmail.readonly\`
-     - \`https://www.googleapis.com/auth/gmail.labels\`
-   - Click **Update**
-7. Click **Save and Continue**
-8. Add your email as a test user (required for External apps in testing)
-9. Click **Save and Continue**
-
-## Step 4: Create OAuth Credentials
-
-1. Go to **APIs & Services** → **Credentials**
-2. Click **Create Credentials** → **OAuth client ID**
-3. Select **Web application**
-4. Enter a name (e.g., "Personal Assistant Web Client")
-5. Under **Authorized redirect URIs**, add:
-   \`http://localhost:3000/api/auth/gmail/callback\`
-6. Click **Create**
-7. **Copy the Client ID and Client Secret**
-
-## Step 5: Configure the Connector
-
-1. Enter the **Client ID**
-2. Enter the **Client Secret**
-3. Click **Save** to store the configuration
-
-## Step 6: Authorize the Connection
-
-1. Click **Connect** or visit \`/api/auth/gmail\`
-2. Sign in with your Google account
-3. Grant the requested permissions
-4. You'll be redirected back after successful authorization
+1. Enter your **Gmail Address**
+2. Paste the **App Password** (the 16-character code)
+3. Click **Save**
+4. Click **Test** to verify the connection
 
 ## Available Tools
 Once connected, the assistant can:
-- Search emails using Gmail search syntax
+- Search emails by keyword
 - Get full email details
-- List email labels
+- List mail folders/labels (Inbox, Sent, Drafts, etc.)
+- Get emails from specific folders
 
-## Gmail Search Syntax Examples
-- \`from:boss@company.com\` - Emails from a specific sender
-- \`subject:meeting\` - Emails with "meeting" in subject
-- \`is:unread\` - Unread emails
-- \`after:2024/01/01\` - Emails after a date
-- \`has:attachment\` - Emails with attachments
+## Troubleshooting
+
+### "Authentication failed" error
+- Make sure you're using an App Password, not your regular Google password
+- Verify 2-Step Verification is enabled on your account
+- Generate a new App Password if the current one doesn't work
+
+### "Connection failed" error
+- Check your internet connection
+- Make sure IMAP is enabled in Gmail settings (Settings > See all settings > Forwarding and POP/IMAP > Enable IMAP)
+
+### Can't find App Passwords option
+- App Passwords are only available when 2-Step Verification is enabled
+- If you use a work/school Google account, your administrator may have disabled this feature
 
 ## Security Notes
-- Your credentials are encrypted before storage
-- The app only requests read-only access
-- Revoke access at https://myaccount.google.com/permissions`,
+- Your App Password is encrypted before storage
+- App Passwords only grant access to email, not your full Google account
+- You can revoke App Passwords anytime at https://myaccount.google.com/apppasswords
+- The connector only reads emails, it cannot send, delete, or modify them`,
   },
   yahoo: {
     type: 'yahoo',
@@ -606,84 +583,76 @@ Once connected, the assistant can:
     description: 'Search and read emails from Yahoo Mail',
     configFields: [
       {
-        key: 'clientId',
-        label: 'Client ID',
-        type: 'text',
-        placeholder: 'Your Yahoo app client ID',
+        key: 'email',
+        label: 'Yahoo Email',
+        type: 'email',
+        placeholder: 'you@yahoo.com',
         required: true,
-        helpText: 'Create at developer.yahoo.com',
+        helpText: 'Your Yahoo email address',
       },
       {
-        key: 'clientSecret',
-        label: 'Client Secret',
+        key: 'appPassword',
+        label: 'App Password',
         type: 'password',
-        placeholder: 'Your client secret',
+        placeholder: 'Your Yahoo app password',
         required: true,
+        helpText: 'Generate at Yahoo Account Security settings',
       },
     ],
     setupInstructions: `# Yahoo Mail Connector Setup
 
 ## Prerequisites
-- A Yahoo account
-- Access to Yahoo Developer Network
+- A Yahoo account with 2-Step Verification enabled
 
-## Step 1: Create a Yahoo App
+## Step 1: Enable 2-Step Verification (if not already enabled)
 
-1. Go to https://developer.yahoo.com/apps/
-2. Sign in with your Yahoo account
-3. Click **Create an App**
-4. Fill in the application details:
-   - **Application Name**: Personal Assistant
-   - **Application Type**: Web Application
-   - **Description**: Personal AI assistant email integration
-   - **Home Page URL**: \`http://localhost:3000\`
-   - **Redirect URI(s)**: \`http://localhost:3000/api/auth/yahoo/callback\`
-5. Under **API Permissions**, select:
-   - **Mail** → **Read**
-6. Click **Create App**
+1. Go to https://login.yahoo.com/account/security
+2. Sign in to your Yahoo account
+3. Click **Two-step verification**
+4. Follow the prompts to set up 2-step verification using your phone
 
-## Step 2: Get Your Credentials
+## Step 2: Generate an App Password
 
-After creating the app, you'll see:
-1. **Client ID (Consumer Key)** - Copy this
-2. **Client Secret (Consumer Secret)** - Click to reveal and copy
+1. Go to https://login.yahoo.com/account/security
+2. Scroll down to **App passwords**
+3. Click **Generate app password** (or **Manage app passwords**)
+4. Select **Other app** from the dropdown
+5. Enter a name like "Personal Assistant"
+6. Click **Generate**
+7. **Copy the 16-character password** that appears
+   - It will look like: \`abcd efgh ijkl mnop\`
+   - Copy it without spaces: \`abcdefghijklmnop\`
 
 ## Step 3: Configure the Connector
 
-1. Enter the **Client ID**
-2. Enter the **Client Secret**
-3. Click **Save** to store the configuration
-
-## Step 4: Authorize the Connection
-
-1. Click **Connect** or visit \`/api/auth/yahoo\`
-2. Sign in with your Yahoo account
-3. Grant the requested permissions
-4. You'll be redirected back after successful authorization
+1. Enter your **Yahoo Email** address
+2. Paste the **App Password** (the 16-character code)
+3. Click **Save**
+4. Click **Test** to verify the connection
 
 ## Available Tools
 Once connected, the assistant can:
-- Search emails
+- Search emails by keyword
 - Get full email details
-- List mail folders
+- List mail folders (Inbox, Sent, Drafts, etc.)
 - Get emails from specific folders
 
 ## Troubleshooting
 
-### "Invalid redirect URI" error
-- Make sure the redirect URI in your Yahoo app exactly matches:
-  \`http://localhost:3000/api/auth/yahoo/callback\`
-- Yahoo requires exact matching, including trailing slashes
+### "Authentication failed" error
+- Make sure you're using an App Password, not your regular Yahoo password
+- Verify 2-Step Verification is enabled on your account
+- Generate a new App Password if the current one doesn't work
 
-### "App not verified" warning
-- This is normal for personal apps
-- Click "Continue" to proceed with authorization
+### "Connection failed" error
+- Check your internet connection
+- Yahoo may temporarily block connections after too many failed attempts
 
 ## Security Notes
-- Your credentials are encrypted before storage
-- The app only requests read-only access
-- Revoke access at https://login.yahoo.com/account/security
-- Yahoo tokens expire after 1 hour but are automatically refreshed`,
+- Your App Password is encrypted before storage
+- App Passwords only grant access to email, not your full Yahoo account
+- You can revoke App Passwords anytime at https://login.yahoo.com/account/security
+- The connector only reads emails, it cannot send, delete, or modify them`,
   },
   'google-drive': {
     type: 'google-drive',

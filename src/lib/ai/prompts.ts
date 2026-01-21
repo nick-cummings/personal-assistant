@@ -60,6 +60,34 @@ export async function buildSystemPrompt(): Promise<string> {
     );
   }
 
+  // Add connector setup instructions so the assistant can help users configure connectors
+  const allMetadata = getAllConnectorMetadata();
+  const setupInstructionsSummary = allMetadata
+    .map((m) => {
+      // Extract key setup info from the full instructions
+      const isOAuth = m.setupInstructions?.includes('Authorize the Connection') ||
+                      m.setupInstructions?.includes('OAuth') ||
+                      m.setupInstructions?.includes('/api/auth/');
+      const hasApiToken = m.setupInstructions?.includes('API Token') ||
+                          m.setupInstructions?.includes('Personal Access Token');
+      const hasServiceAccount = m.setupInstructions?.includes('Service Account');
+
+      let authMethod = '';
+      if (isOAuth) {
+        authMethod = 'OAuth (requires app registration, then user authorization)';
+      } else if (hasServiceAccount) {
+        authMethod = 'Service Account credentials';
+      } else if (hasApiToken) {
+        authMethod = 'API Token/Personal Access Token';
+      }
+
+      const fields = m.configFields.map(f => f.label).join(', ');
+      return `- **${m.name}**: ${authMethod}. Required fields: ${fields}`;
+    })
+    .join('\n');
+
+  parts.push(`\n## Connector Setup Reference\n\nWhen users ask about setting up connectors, use this information:\n\n${setupInstructionsSummary}\n\n**OAuth connectors** (Gmail, Yahoo Mail, Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar): Users need to create an app/register in the respective developer console, enter the Client ID and Client Secret, save, then click "Connect" to complete the OAuth authorization flow.\n\n**API Token connectors** (GitHub, Jira, Confluence, Jenkins): Users generate a token from the service's settings and enter it directly.\n\n**Service Account connectors** (Google Cloud): Users create a service account and provide the JSON key credentials.\n\n**AWS**: Uses IAM access keys (Access Key ID + Secret Access Key).`);
+
   return parts.join('\n');
 }
 
