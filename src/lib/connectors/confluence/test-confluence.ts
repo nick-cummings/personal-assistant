@@ -288,10 +288,65 @@ async function main() {
     console.error('List drafts failed:', error);
   }
 
-  // Test 10: Query specific instance only
+  // Test 10: Create a draft page
+  if (firstSpace) {
+    console.log(`--- Test 10: createDraftPage() in space "${firstSpace.key}" ---`);
+    try {
+      // Get the space ID (numeric) from the space key
+      const spacesResults = await client.queryAllInstances(
+        (instClient) => instClient.listSpaces(),
+        firstSpace.instance
+      );
+      const spaces = spacesResults[0]?.result || [];
+      const targetSpace = spaces.find((s) => s.key === firstSpace.key);
+
+      if (!targetSpace) {
+        console.log(`Could not find space with key "${firstSpace.key}"`);
+      } else {
+        const testTitle = `Test Draft Page - ${new Date().toISOString()}`;
+        const testContent = `This is a test draft page created by the Confluence connector test script.
+
+It was created on ${new Date().toLocaleString()}.
+
+This page should be deleted manually after testing.
+
+Features tested:
+- Creating draft pages via API
+- Plain text to storage format conversion
+- Multi-paragraph content`;
+
+        const instanceClient = client.getInstance(firstSpace.instance);
+        if (instanceClient) {
+          const draft = await instanceClient.createDraftPage({
+            spaceId: String(targetSpace.id),
+            title: testTitle,
+            content: testContent,
+          });
+
+          console.log('Draft page created successfully!');
+          console.log('  ID:', draft.id);
+          console.log('  Title:', draft.title);
+          console.log('  Space ID:', draft.spaceId);
+          console.log('  Status:', draft.status);
+          console.log('  URL:', `https://${instanceClient.host}/wiki${draft._links.webui}`);
+          console.log('  Edit URL:', draft._links.editui
+            ? `https://${instanceClient.host}/wiki${draft._links.editui}`
+            : `https://${instanceClient.host}/wiki/pages/resumedraft.action?draftId=${draft.id}`);
+          console.log('\n  ⚠️  Remember to delete this draft page manually in Confluence!');
+        }
+      }
+      console.log();
+    } catch (error) {
+      console.error('Create draft page failed:', error);
+    }
+  } else {
+    console.log('--- Test 10: Skipped (no spaces found) ---\n');
+  }
+
+  // Test 11: Query specific instance only
   if (instances.length > 1) {
     const targetInstance = instances[0].name;
-    console.log(`--- Test 10: Query single instance "${targetInstance}" only ---`);
+    console.log(`--- Test 11: Query single instance "${targetInstance}" only ---`);
     try {
       const results = await client.queryAllInstances(
         (instClient) => instClient.listSpaces(),
@@ -304,7 +359,7 @@ async function main() {
       console.error('Query single instance failed:', error);
     }
   } else {
-    console.log('--- Test 10: Skipped (only one instance configured) ---\n');
+    console.log('--- Test 11: Skipped (only one instance configured) ---\n');
   }
 
   console.log('=== All tests complete ===');
