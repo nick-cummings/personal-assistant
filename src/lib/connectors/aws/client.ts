@@ -27,19 +27,46 @@ import {
 import {
   LambdaClient,
   GetFunctionCommand,
+  ListFunctionsCommand,
   type FunctionConfiguration,
 } from '@aws-sdk/client-lambda';
+import {
+  EC2Client,
+  DescribeInstancesCommand,
+  type Instance,
+  type Reservation,
+} from '@aws-sdk/client-ec2';
+import {
+  S3Client,
+  ListBucketsCommand,
+  type Bucket,
+} from '@aws-sdk/client-s3';
+import {
+  DynamoDBClient,
+  ListTablesCommand,
+  DescribeTableCommand,
+  ScanCommand,
+  QueryCommand,
+  type TableDescription,
+  type AttributeValue,
+} from '@aws-sdk/client-dynamodb';
+import { unmarshall } from '@aws-sdk/util-dynamodb';
 import type { AWSConfig } from '../types';
 
 export class AWSClient {
+  private config: AWSConfig;
   private cloudWatchLogs: CloudWatchLogsClient;
   private codePipeline: CodePipelineClient;
   private codeBuild: CodeBuildClient;
   private ecs: ECSClient;
   private lambda: LambdaClient;
+  private ec2: EC2Client;
+  private s3: S3Client;
+  private dynamodb: DynamoDBClient;
   public region: string;
 
   constructor(config: AWSConfig) {
+    this.config = config;
     const credentials = {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
@@ -71,6 +98,25 @@ export class AWSClient {
       region: config.region,
       credentials,
     });
+
+    this.ec2 = new EC2Client({
+      region: config.region,
+      credentials,
+    });
+
+    this.s3 = new S3Client({
+      region: config.region,
+      credentials,
+    });
+
+    this.dynamodb = new DynamoDBClient({
+      region: config.region,
+      credentials,
+    });
+  }
+
+  hasCredentials(): boolean {
+    return !!(this.config.accessKeyId && this.config.secretAccessKey && this.config.region);
   }
 
   // CloudWatch Logs
@@ -194,6 +240,135 @@ export class AWSClient {
       throw new Error(`Lambda function ${functionName} not found`);
     }
     return response.Configuration;
+  }
+
+  // List Lambda functions
+  async listLambdaFunctions(): Promise<FunctionConfiguration[]> {
+    const functions: FunctionConfiguration[] = [];
+    let marker: string | undefined;
+
+    do {
+      const command = new ListFunctionsCommand({
+        Marker: marker,
+        MaxItems: 50,
+      });
+      const response = await this.lambda.send(command);
+      functions.push(...(response.Functions ?? []));
+      marker = response.NextMarker;
+    } while (marker);
+
+    return functions;
+  }
+
+  // EC2 Instances
+  async listEC2Instances(filters?: { state?: string }): Promise<Instance[]> {
+    const command = new DescribeInstancesCommand({
+      Filters: filters?.state
+        ? [{ Name: 'instance-state-name', Values: [filters.state] }]
+        : undefined,
+      MaxResults: 100,
+    });
+    const response = await this.ec2.send(command);
+    const instances: Instance[] = [];
+    for (const reservation of response.Reservations ?? []) {
+      instances.push(...(reservation.Instances ?? []));
+    }
+    return instances;
+  }
+
+  // S3 Buckets
+  async listS3Buckets(): Promise<Bucket[]> {
+    const command = new ListBucketsCommand({});
+    const response = await this.s3.send(command);
+    return response.Buckets ?? [];
+  }
+
+  // DynamoDB Tables
+  async listDynamoDBTables(): Promise<string[]> {
+    const tables: string[] = [];
+    let lastEvaluatedTableName: string | undefined;
+
+    do {
+      const command = new ListTablesCommand({
+        ExclusiveStartTableName: lastEvaluatedTableName,
+        Limit: 100,
+      });
+      const response = await this.dynamodb.send(command);
+      tables.push(...(response.TableNames ?? []));
+      lastEvaluatedTableName = response.LastEvaluatedTableName;
+    } while (lastEvaluatedTableName);
+
+    return tables;
+  }
+
+  async describeDynamoDBTable(tableName: string): Promise<TableDescription> {
+    const command = new DescribeTableCommand({ TableName: tableName });
+    const response = await this.dynamodb.send(command);
+    if (!response.Table) {
+      throw new Error(`DynamoDB table ${tableName} not found`);
+    }
+    return response.Table;
+  }
+
+  // Scan DynamoDB table (returns all items, use with caution on large tables)
+  async scanDynamoDBTable(
+    tableName: string,
+    options?: {
+      filterExpression?: string;
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, AttributeValue>;
+      limit?: number;
+      projectionExpression?: string;
+    }
+  ): Promise<{ items: Record<string, unknown>[]; count: number; scannedCount: number }> {
+    const command = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: options?.filterExpression,
+      ExpressionAttributeNames: options?.expressionAttributeNames,
+      ExpressionAttributeValues: options?.expressionAttributeValues,
+      Limit: options?.limit ?? 100,
+      ProjectionExpression: options?.projectionExpression,
+    });
+    const response = await this.dynamodb.send(command);
+    const items = (response.Items ?? []).map((item) => unmarshall(item));
+    return {
+      items,
+      count: response.Count ?? 0,
+      scannedCount: response.ScannedCount ?? 0,
+    };
+  }
+
+  // Query DynamoDB table by partition key (and optionally sort key)
+  async queryDynamoDBTable(
+    tableName: string,
+    keyConditionExpression: string,
+    options?: {
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, AttributeValue>;
+      filterExpression?: string;
+      limit?: number;
+      scanIndexForward?: boolean; // true = ascending, false = descending
+      indexName?: string;
+      projectionExpression?: string;
+    }
+  ): Promise<{ items: Record<string, unknown>[]; count: number }> {
+    const command = new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: keyConditionExpression,
+      ExpressionAttributeNames: options?.expressionAttributeNames,
+      ExpressionAttributeValues: options?.expressionAttributeValues,
+      FilterExpression: options?.filterExpression,
+      Limit: options?.limit ?? 100,
+      ScanIndexForward: options?.scanIndexForward,
+      IndexName: options?.indexName,
+      ProjectionExpression: options?.projectionExpression,
+    });
+    const response = await this.dynamodb.send(command);
+    const items = (response.Items ?? []).map((item) => unmarshall(item));
+    return {
+      items,
+      count: response.Count ?? 0,
+    };
   }
 
   // Test connection by trying to list pipelines (simple operation)
