@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, X, Loader2, Plug, Settings2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Loader2, Plug, Settings2, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -25,6 +25,15 @@ import {
   type ConnectorListItem,
 } from '@/hooks/use-connectors';
 import type { ConnectorType } from '@/types';
+
+// OAuth-based connectors that need a "Connect" button after saving credentials
+const OAUTH_CONNECTORS: ConnectorType[] = [
+  'outlook',
+  'google-drive',
+  'google-docs',
+  'google-sheets',
+  'google-calendar',
+];
 
 export default function ConnectorsPage() {
   const { data: connectors, isLoading } = useConnectors();
@@ -147,46 +156,39 @@ function ConnectorCard({
         <p className="text-muted-foreground text-sm">{connector.description}</p>
         {connector.lastHealthy && (
           <p className="text-muted-foreground mt-1 text-xs">
-            Last verified: {new Date(connector.lastHealthy).toLocaleDateString()}
+            Last verified: {new Date(connector.lastHealthy).toLocaleString()}
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {connector.configured && (
           <>
-            {testResult && (
-              <span
-                className={`text-xs ${testResult.success ? 'text-green-600' : 'text-red-600'}`}
-              >
-                {testResult.success ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <X className="h-4 w-4" />
-                    </TooltipTrigger>
-                    <TooltipContent>{testResult.error}</TooltipContent>
-                  </Tooltip>
-                )}
-              </span>
-            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={handleTest}
                   disabled={testConnector.isPending}
+                  className="gap-1.5"
                 >
                   {testConnector.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Test'
-                  )}
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : testResult ? (
+                    testResult.success ? (
+                      <Check className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <X className="h-3.5 w-3.5 text-red-600" />
+                    )
+                  ) : null}
+                  Test
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Test connection</TooltipContent>
+              <TooltipContent>
+                {testResult?.error || 'Test connection'}
+              </TooltipContent>
             </Tooltip>
+            <div className="bg-border h-6 w-px" />
             <Switch
               checked={connector.enabled}
               onCheckedChange={handleToggle}
@@ -223,6 +225,7 @@ function ConnectorConfigDialog({
   const updateConnector = useUpdateConnector();
   const deleteConnector = useDeleteConnector();
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize form when connector data loads
@@ -230,14 +233,18 @@ function ConnectorConfigDialog({
     if (!isOpen) {
       onClose();
       setFormData({});
+      setInitialized(false);
       setError(null);
     }
   };
 
-  // Update form when connector loads
-  if (connector && Object.keys(formData).length === 0) {
-    setFormData(connector.config);
-  }
+  // Update form when connector loads - using useEffect to avoid render loop
+  useEffect(() => {
+    if (connector && !initialized) {
+      setFormData(connector.config);
+      setInitialized(true);
+    }
+  }, [connector, initialized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,6 +268,9 @@ function ConnectorConfigDialog({
       onClose();
     }
   };
+
+  const isOAuthConnector = OAUTH_CONNECTORS.includes(type);
+  const oauthUrl = `/api/auth/${type}`;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -299,6 +309,14 @@ function ConnectorConfigDialog({
                 </div>
               ))}
 
+              {isOAuthConnector && connector?.configured && (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Step 2:</strong> After saving your credentials, click &quot;Connect&quot; below to authorize access to your account.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <p className="text-sm text-destructive">{error}</p>
               )}
@@ -321,6 +339,14 @@ function ConnectorConfigDialog({
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
+                {isOAuthConnector && connector?.configured && (
+                  <Button type="button" variant="secondary" asChild>
+                    <a href={oauthUrl}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Connect
+                    </a>
+                  </Button>
+                )}
                 <Button type="submit" disabled={updateConnector.isPending}>
                   {updateConnector.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
