@@ -1047,7 +1047,110 @@ export function getSetupInstructions(type: ConnectorType): string {
   return connectorMetadata[type]?.setupInstructions ?? '';
 }
 
-// Create a connector instance from database config
+// Get config from environment variables for a connector type
+function getEnvConfig<T extends ConnectorType>(type: T): ConnectorConfigMap[T] | null {
+  switch (type) {
+    case 'jira':
+    case 'confluence': {
+      // Support ATLASSIAN_INSTANCES JSON or individual vars
+      if (process.env.ATLASSIAN_INSTANCES) {
+        try {
+          const instances = JSON.parse(process.env.ATLASSIAN_INSTANCES);
+          if (Array.isArray(instances) && instances.length > 0) {
+            return { instances } as ConnectorConfigMap[T];
+          }
+        } catch {
+          // Fall through to individual vars
+        }
+      }
+      // Individual vars fallback
+      const host =
+        process.env.ATLASSIAN_HOST ||
+        process.env[`${type.toUpperCase()}_HOST`] ||
+        process.env[`${type.toUpperCase()}_BASE_URL`];
+      const email =
+        process.env.ATLASSIAN_EMAIL || process.env[`${type.toUpperCase()}_EMAIL`];
+      const apiToken =
+        process.env.ATLASSIAN_API_TOKEN || process.env[`${type.toUpperCase()}_API_TOKEN`];
+      if (host && email && apiToken) {
+        const name = process.env.ATLASSIAN_INSTANCE_NAME || 'Default';
+        return {
+          instances: [{ name, host: host.replace(/^https?:\/\//, '').replace(/\/$/, ''), email, apiToken }],
+        } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'github': {
+      const token = process.env.GITHUB_TOKEN;
+      if (token) {
+        return {
+          token,
+          defaultOwner: process.env.GITHUB_DEFAULT_OWNER,
+        } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'aws': {
+      const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+      const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+      const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+      if (accessKeyId && secretAccessKey && region) {
+        return { accessKeyId, secretAccessKey, region } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'jenkins': {
+      const url = process.env.JENKINS_URL;
+      const username = process.env.JENKINS_USERNAME;
+      const apiToken = process.env.JENKINS_API_TOKEN;
+      if (url && username && apiToken) {
+        return { url, username, apiToken } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'gmail': {
+      const email = process.env.GMAIL_EMAIL;
+      const appPassword = process.env.GMAIL_APP_PASSWORD;
+      if (email && appPassword) {
+        return { email, appPassword } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'yahoo': {
+      const email = process.env.YAHOO_EMAIL;
+      const appPassword = process.env.YAHOO_APP_PASSWORD;
+      if (email && appPassword) {
+        return { email, appPassword } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    case 'google-cloud': {
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID;
+      const clientEmail = process.env.GOOGLE_CLOUD_CLIENT_EMAIL || process.env.GCP_CLIENT_EMAIL;
+      const privateKey = process.env.GOOGLE_CLOUD_PRIVATE_KEY || process.env.GCP_PRIVATE_KEY;
+      if (projectId && clientEmail && privateKey) {
+        return {
+          projectId,
+          clientEmail,
+          privateKey,
+          region: process.env.GOOGLE_CLOUD_REGION || process.env.GCP_REGION,
+        } as ConnectorConfigMap[T];
+      }
+      return null;
+    }
+    // OAuth-based connectors require database config (they need refresh tokens)
+    case 'outlook':
+    case 'google-drive':
+    case 'google-docs':
+    case 'google-sheets':
+    case 'google-calendar':
+      return null;
+    default:
+      return null;
+  }
+}
+
+// Create a connector instance from database config or environment variables
 export async function createConnectorInstance<T extends ConnectorType>(
   type: T
 ): Promise<Connector<T> | null> {
@@ -1057,30 +1160,42 @@ export async function createConnectorInstance<T extends ConnectorType>(
     return null;
   }
 
+  // Try database first
   const dbConnector = await db.connector.findUnique({
     where: { type },
   });
 
-  if (!dbConnector || !dbConnector.enabled) {
-    return null;
+  if (dbConnector?.enabled) {
+    try {
+      const config = decryptJson<ConnectorConfigMap[T]>(dbConnector.config);
+      return new Constructor(config) as Connector<T>;
+    } catch (error) {
+      console.error(`Failed to create connector instance for ${type} from DB:`, error);
+    }
   }
 
-  try {
-    const config = decryptJson<ConnectorConfigMap[T]>(dbConnector.config);
-    return new Constructor(config) as Connector<T>;
-  } catch (error) {
-    console.error(`Failed to create connector instance for ${type}:`, error);
-    return null;
+  // Fall back to environment variables
+  const envConfig = getEnvConfig(type);
+  if (envConfig) {
+    try {
+      return new Constructor(envConfig) as Connector<T>;
+    } catch (error) {
+      console.error(`Failed to create connector instance for ${type} from env:`, error);
+    }
   }
+
+  return null;
 }
 
-// Get all enabled connector instances
+// Get all enabled connector instances (from DB and environment variables)
 export async function getEnabledConnectors(): Promise<Connector[]> {
+  const connectors: Connector[] = [];
+  const loadedTypes = new Set<ConnectorType>();
+
+  // First, load from database
   const dbConnectors = await db.connector.findMany({
     where: { enabled: true },
   });
-
-  const connectors: Connector[] = [];
 
   for (const dbConnector of dbConnectors) {
     const type = dbConnector.type as ConnectorType;
@@ -1094,8 +1209,43 @@ export async function getEnabledConnectors(): Promise<Connector[]> {
       const config = decryptJson<ConnectorConfigMap[typeof type]>(dbConnector.config);
       const instance = new Constructor(config);
       connectors.push(instance);
+      loadedTypes.add(type);
     } catch (error) {
-      console.error(`Failed to create connector instance for ${type}:`, error);
+      console.error(`Failed to create connector instance for ${type} from DB:`, error);
+    }
+  }
+
+  // Then, check environment variables for connectors not in DB
+  const allTypes: ConnectorType[] = [
+    'github',
+    'jira',
+    'confluence',
+    'jenkins',
+    'aws',
+    'gmail',
+    'yahoo',
+    'google-cloud',
+  ];
+
+  for (const type of allTypes) {
+    if (loadedTypes.has(type)) {
+      continue; // Already loaded from DB
+    }
+
+    const Constructor = connectorConstructors[type];
+    if (!Constructor) {
+      continue;
+    }
+
+    const envConfig = getEnvConfig(type);
+    if (envConfig) {
+      try {
+        const instance = new Constructor(envConfig);
+        connectors.push(instance);
+        loadedTypes.add(type);
+      } catch (error) {
+        console.error(`Failed to create connector instance for ${type} from env:`, error);
+      }
     }
   }
 
