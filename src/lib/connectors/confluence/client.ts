@@ -72,13 +72,19 @@ interface ConfluenceSpacesResponse {
 export class ConfluenceClient {
   private baseUrl: string;
   private authHeader: string;
+  private config: ConfluenceConfig;
   public host: string;
 
   constructor(config: ConfluenceConfig) {
+    this.config = config;
     this.host = config.host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     this.baseUrl = `https://${this.host}/wiki/api/v2`;
     this.authHeader =
       'Basic ' + Buffer.from(`${config.email}:${config.apiToken}`).toString('base64');
+  }
+
+  hasCredentials(): boolean {
+    return !!(this.config.host && this.config.email && this.config.apiToken);
   }
 
   private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -199,6 +205,62 @@ export class ConfluenceClient {
 
   async testConnection(): Promise<void> {
     await this.listSpaces();
+  }
+
+  async listDraftPages(spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
+    // Use REST API v1 which supports draft status (v2 does not)
+    let url = `https://${this.host}/wiki/rest/api/content?status=draft&limit=${limit}&expand=version,space`;
+
+    if (spaceKey) {
+      url += `&spaceKey=${encodeURIComponent(spaceKey)}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: this.authHeader,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Confluence draft pages error (${response.status}): ${error}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      results: data.results.map((r: {
+        id: string;
+        title: string;
+        type: string;
+        status: string;
+        space?: { key: string };
+        version?: { number: number; when: string; by?: { accountId: string } };
+        _links: { webui: string };
+        excerpt?: string;
+      }) => ({
+        content: {
+          id: r.id,
+          title: r.title || '(Untitled Draft)',
+          type: r.type,
+          status: r.status,
+          spaceId: r.space?.key ?? '',
+          authorId: r.version?.by?.accountId ?? '',
+          createdAt: r.version?.when ?? '',
+          version: {
+            number: r.version?.number ?? 1,
+            createdAt: r.version?.when ?? '',
+            authorId: r.version?.by?.accountId ?? '',
+          },
+          _links: r._links,
+        },
+        excerpt: r.excerpt ?? '',
+        lastModified: r.version?.when ?? '',
+      })),
+      totalSize: data.size ?? data.results.length,
+      _links: data._links ?? {},
+    };
   }
 
   private stripHtml(html: string): string {
