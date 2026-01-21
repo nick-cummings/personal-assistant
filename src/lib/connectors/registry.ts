@@ -1063,9 +1063,10 @@ function getEnvConfig<T extends ConnectorType>(type: T): ConnectorConfigMap[T] |
           // Fall through to individual vars
         }
       }
-      // Individual vars fallback
+      // Individual vars fallback - check ATLASSIAN_* and type-specific vars
       const host =
         process.env.ATLASSIAN_HOST ||
+        process.env.ATLASSIAN_BASE_URL || // Common alternative naming
         process.env[`${type.toUpperCase()}_HOST`] ||
         process.env[`${type.toUpperCase()}_BASE_URL`];
       const email =
@@ -1085,7 +1086,7 @@ function getEnvConfig<T extends ConnectorType>(type: T): ConnectorConfigMap[T] |
       if (token) {
         return {
           token,
-          defaultOwner: process.env.GITHUB_DEFAULT_OWNER,
+          defaultOwner: process.env.GITHUB_DEFAULT_OWNER || process.env.GITHUB_USERNAME,
         } as ConnectorConfigMap[T];
       }
       return null;
