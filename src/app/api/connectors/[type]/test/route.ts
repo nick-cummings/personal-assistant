@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { decryptJson } from '@/lib/utils/crypto';
 import { createConnectorInstance } from '@/lib/connectors';
+import { db } from '@/lib/db';
 import { CONNECTOR_TYPES, type ConnectorType } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Import connectors to ensure they're registered
 import '@/lib/connectors';

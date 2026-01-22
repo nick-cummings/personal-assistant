@@ -1,34 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Menu, Plus, Settings, FileText, FolderPlus, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { SearchInput } from './search-input';
-import { FolderTree } from './folder-tree';
-import { ArchivedChats } from './archived-chats';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useFolders, useCreateFolder } from '@/hooks/use-folders';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useChats, useCreateChat } from '@/hooks/use-chats';
+import { useCreateFolder, useFolders } from '@/hooks/use-folders';
+import { FileText, FolderPlus, Menu, Plus, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { ArchivedChats } from './archived-chats';
+import { FolderTree } from './folder-tree';
+import { SearchInput } from './search-input';
 
 interface MobileSidebarProps {
   open?: boolean;
@@ -78,7 +72,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="left" className="w-[280px] p-0">
-          <SheetHeader className="p-4 border-b">
+          <SheetHeader className="border-b p-4">
             <div className="flex items-center justify-between">
               <SheetTitle>AI Chat Hub</SheetTitle>
               <Button variant="ghost" size="icon" onClick={handleNewChat}>
@@ -87,7 +81,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             </div>
           </SheetHeader>
 
-          <div className="py-2 px-2">
+          <div className="px-2 py-2">
             <SearchInput />
           </div>
 
@@ -101,10 +95,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                 </div>
               ) : (
                 <>
-                  <FolderTree
-                    folders={folders ?? []}
-                    unfiledChats={unfiledChats}
-                  />
+                  <FolderTree folders={folders ?? []} unfiledChats={unfiledChats} />
                   <ArchivedChats />
                 </>
               )}
@@ -152,9 +143,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Folder</DialogTitle>
-            <DialogDescription>
-              Create a new folder to organize your chats.
-            </DialogDescription>
+            <DialogDescription>Create a new folder to organize your chats.</DialogDescription>
           </DialogHeader>
           <Input
             value={newFolderName}
@@ -164,10 +153,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             autoFocus
           />
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowNewFolderDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleNewFolder} disabled={createFolder.isPending}>
@@ -201,7 +187,7 @@ export function MobileHeader() {
 
   return (
     <>
-      <div className="flex md:hidden items-center justify-between border-b p-2">
+      <div className="flex items-center justify-between border-b p-2 md:hidden">
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
           <Menu className="h-5 w-5" />
         </Button>

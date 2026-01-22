@@ -131,9 +131,7 @@ export class GoogleCloudClient {
       encoder.encode(signInput)
     );
 
-    const signatureB64 = this.base64urlEncode(
-      String.fromCharCode(...new Uint8Array(signature))
-    );
+    const signatureB64 = this.base64urlEncode(String.fromCharCode(...new Uint8Array(signature)));
 
     return `${signInput}.${signatureB64}`;
   }
@@ -161,10 +159,7 @@ export class GoogleCloudClient {
     return response.json();
   }
 
-  async listLogEntries(
-    filter?: string,
-    maxResults: number = 100
-  ): Promise<LogEntry[]> {
+  async listLogEntries(filter?: string, maxResults: number = 100): Promise<LogEntry[]> {
     const accessToken = await this.getAccessToken();
 
     const body: Record<string, unknown> = {
@@ -204,9 +199,7 @@ export class GoogleCloudClient {
   }
 
   async getCloudFunction(name: string): Promise<CloudFunction> {
-    return this.makeRequest<CloudFunction>(
-      `https://cloudfunctions.googleapis.com/v1/${name}`
-    );
+    return this.makeRequest<CloudFunction>(`https://cloudfunctions.googleapis.com/v1/${name}`);
   }
 
   async listComputeInstances(zone?: string): Promise<ComputeInstance[]> {

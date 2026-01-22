@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { getConfigFields, getConnectorMetadata } from '@/lib/connectors';
 import { db } from '@/lib/db';
-import { encryptJson, decryptJson } from '@/lib/utils/crypto';
-import { getConnectorMetadata, getConfigFields } from '@/lib/connectors';
+import { decryptJson, encryptJson } from '@/lib/utils/crypto';
 import { CONNECTOR_TYPES, type ConnectorType } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
   params: Promise<{ type: string }>;
@@ -32,8 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const configFields = getConfigFields(connectorType);
         for (const field of configFields) {
           if (config[field.key]) {
-            maskedConfig[field.key] =
-              field.type === 'password' ? '••••••••' : config[field.key];
+            maskedConfig[field.key] = field.type === 'password' ? '••••••••' : config[field.key];
           }
         }
       } catch {
@@ -77,10 +76,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const configFields = getConfigFields(connectorType);
     for (const field of configFields) {
       if (field.required && !config[field.key]) {
-        return NextResponse.json(
-          { error: `${field.label} is required` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `${field.label} is required` }, { status: 400 });
       }
     }
 

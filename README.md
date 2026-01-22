@@ -127,14 +127,14 @@ GOOGLE_CLOUD_PRIVATE_KEY=
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| ⌘K | Open command palette |
-| ⌘N | New chat |
-| ⌘B | Toggle sidebar |
-| ⌘, | Open settings |
-| ⌘/ | Focus search |
-| Esc | Close dialogs |
+| Shortcut | Action               |
+| -------- | -------------------- |
+| ⌘K       | Open command palette |
+| ⌘N       | New chat             |
+| ⌘B       | Toggle sidebar       |
+| ⌘,       | Open settings        |
+| ⌘/       | Focus search         |
+| Esc      | Close dialogs        |
 
 ## Connector Setup
 

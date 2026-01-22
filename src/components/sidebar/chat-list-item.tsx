@@ -1,31 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useDraggable } from '@dnd-kit/core';
-import { MessageSquare, MoreHorizontal, Pencil, Trash2, GitFork, Archive, ArchiveRestore, GripVertical } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { useUpdateChat, useDeleteChat, useForkChat, useArchiveChat } from '@/hooks/use-chats';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useArchiveChat, useDeleteChat, useForkChat, useUpdateChat } from '@/hooks/use-chats';
+import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import type { Chat } from '@/types';
+import { useDraggable } from '@dnd-kit/core';
+import {
+    Archive,
+    ArchiveRestore, GitFork, GripVertical, MessageSquare,
+    MoreHorizontal,
+    Pencil,
+    Trash2
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import type { DragItem } from './dnd-context';
 
 interface ChatListItemProps {
@@ -109,22 +115,22 @@ export function ChatListItem({ chat, isActive }: ChatListItemProps) {
       <div
         ref={setNodeRef}
         className={cn(
-          'group hover:bg-accent flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm min-w-0',
+          'group hover:bg-accent flex min-w-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm',
           isActive && 'bg-accent',
           isDragging && 'opacity-50'
         )}
         onClick={handleClick}
       >
         <div
-          className="cursor-grab opacity-0 group-hover:opacity-100 touch-none"
+          className="cursor-grab touch-none opacity-0 group-hover:opacity-100"
           {...listeners}
           {...attributes}
         >
-          <GripVertical className="h-3 w-3 text-muted-foreground" />
+          <GripVertical className="text-muted-foreground h-3 w-3" />
         </div>
         <MessageSquare className="text-muted-foreground h-4 w-4 flex-shrink-0" />
         <span
-          className="overflow-hidden text-ellipsis whitespace-nowrap flex-1"
+          className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
           style={{ maxWidth: '140px' }}
           title={chat.title}
         >

@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { AWSClient } from './client';
 import type { ToolSet } from '../types';
+import { AWSClient } from './client';
 
 export function createAWSTools(client: AWSClient): ToolSet {
   const aws_list_log_groups = tool({
@@ -91,7 +91,13 @@ export function createAWSTools(client: AWSClient): ToolSet {
         .describe('Maximum number of log events to return (default: 50, max: 10000)'),
     }),
     execute: async ({ logGroupName, filterPattern, startTime, endTime, limit }) => {
-      console.log('[AWS] aws_search_logs called with:', { logGroupName, filterPattern, startTime, endTime, limit });
+      console.log('[AWS] aws_search_logs called with:', {
+        logGroupName,
+        filterPattern,
+        startTime,
+        endTime,
+        limit,
+      });
 
       if (!client.hasCredentials()) {
         console.log('[AWS] No credentials configured');
@@ -106,7 +112,12 @@ export function createAWSTools(client: AWSClient): ToolSet {
         const effectiveStartTime = startTime ?? now - 3600000; // Default: 1 hour ago
         const effectiveEndTime = endTime ?? now;
         console.log('[AWS] Searching logs in:', logGroupName, 'for pattern:', filterPattern);
-        console.log('[AWS] Time range:', new Date(effectiveStartTime).toISOString(), 'to', new Date(effectiveEndTime).toISOString());
+        console.log(
+          '[AWS] Time range:',
+          new Date(effectiveStartTime).toISOString(),
+          'to',
+          new Date(effectiveEndTime).toISOString()
+        );
 
         const events = await client.searchLogs(logGroupName, filterPattern, {
           startTime: effectiveStartTime,
@@ -194,7 +205,8 @@ export function createAWSTools(client: AWSClient): ToolSet {
         }
         if (message.includes('AccessDenied')) {
           return {
-            error: 'Access denied to CodePipeline. Your IAM user may need codepipeline:ListPipelines permission.',
+            error:
+              'Access denied to CodePipeline. Your IAM user may need codepipeline:ListPipelines permission.',
           };
         }
         return {
@@ -372,7 +384,12 @@ export function createAWSTools(client: AWSClient): ToolSet {
       }
 
       try {
-        console.log('[AWS] Describing ECS services in cluster:', clusterName, 'service:', serviceName || '(all)');
+        console.log(
+          '[AWS] Describing ECS services in cluster:',
+          clusterName,
+          'service:',
+          serviceName || '(all)'
+        );
         const services = await client.describeECSServices(clusterName, serviceName);
         console.log('[AWS] Found', services.length, 'services');
 
@@ -483,7 +500,10 @@ export function createAWSTools(client: AWSClient): ToolSet {
               'AWS authentication failed. Please check your Access Key ID and Secret Access Key in Settings → Connectors.',
           };
         }
-        if (message.includes('ResourceNotFoundException') || message.includes('Function not found')) {
+        if (
+          message.includes('ResourceNotFoundException') ||
+          message.includes('Function not found')
+        ) {
           return {
             error: `Lambda function "${functionName}" not found. Check the function name or ARN.`,
           };
@@ -541,7 +561,8 @@ export function createAWSTools(client: AWSClient): ToolSet {
         }
         if (message.includes('AccessDenied')) {
           return {
-            error: 'Access denied to Lambda. Your IAM user may need lambda:ListFunctions permission.',
+            error:
+              'Access denied to Lambda. Your IAM user may need lambda:ListFunctions permission.',
           };
         }
         return {
@@ -572,7 +593,12 @@ export function createAWSTools(client: AWSClient): ToolSet {
       }
 
       try {
-        console.log('[AWS] Listing EC2 instances in region:', client.region, 'state:', state || '(all)');
+        console.log(
+          '[AWS] Listing EC2 instances in region:',
+          client.region,
+          'state:',
+          state || '(all)'
+        );
         const instances = await client.listEC2Instances(state ? { state } : undefined);
         console.log('[AWS] Found', instances.length, 'EC2 instances');
 
@@ -707,7 +733,8 @@ export function createAWSTools(client: AWSClient): ToolSet {
         }
         if (message.includes('AccessDenied')) {
           return {
-            error: 'Access denied to DynamoDB. Your IAM user may need dynamodb:ListTables permission.',
+            error:
+              'Access denied to DynamoDB. Your IAM user may need dynamodb:ListTables permission.',
           };
         }
         return {
@@ -723,7 +750,9 @@ export function createAWSTools(client: AWSClient): ToolSet {
     inputSchema: z.object({
       tableName: z
         .string()
-        .describe('The name of the DynamoDB table (e.g., "users", "orders", "sessions"). Get this from aws_list_dynamodb_tables results.'),
+        .describe(
+          'The name of the DynamoDB table (e.g., "users", "orders", "sessions"). Get this from aws_list_dynamodb_tables results.'
+        ),
     }),
     execute: async ({ tableName }) => {
       console.log('[AWS] aws_describe_dynamodb_table called with:', { tableName });
@@ -739,7 +768,10 @@ export function createAWSTools(client: AWSClient): ToolSet {
       try {
         console.log('[AWS] Describing DynamoDB table:', tableName);
         const table = await client.describeDynamoDBTable(tableName);
-        console.log('[AWS] Got DynamoDB table:', { name: table.TableName, status: table.TableStatus });
+        console.log('[AWS] Got DynamoDB table:', {
+          name: table.TableName,
+          status: table.TableStatus,
+        });
 
         return {
           tableName: table.TableName,
@@ -797,9 +829,7 @@ export function createAWSTools(client: AWSClient): ToolSet {
     description:
       'Scan a DynamoDB table to retrieve items. Scans read every item in the table and can optionally filter results. Use aws_query_dynamodb_table instead when you know the partition key for better performance. Limited to 100 items by default.',
     inputSchema: z.object({
-      tableName: z
-        .string()
-        .describe('The name of the DynamoDB table to scan'),
+      tableName: z.string().describe('The name of the DynamoDB table to scan'),
       filterExpression: z
         .string()
         .optional()
@@ -837,8 +867,19 @@ export function createAWSTools(client: AWSClient): ToolSet {
           'Comma-separated list of attributes to retrieve (e.g., "userId, userName, email"). Omit to get all attributes.'
         ),
     }),
-    execute: async ({ tableName, filterExpression, expressionAttributeNames, expressionAttributeValues, limit, projectionExpression }) => {
-      console.log('[AWS] aws_scan_dynamodb_table called with:', { tableName, filterExpression, limit });
+    execute: async ({
+      tableName,
+      filterExpression,
+      expressionAttributeNames,
+      expressionAttributeValues,
+      limit,
+      projectionExpression,
+    }) => {
+      console.log('[AWS] aws_scan_dynamodb_table called with:', {
+        tableName,
+        filterExpression,
+        limit,
+      });
 
       if (!client.hasCredentials()) {
         console.log('[AWS] No credentials configured');
@@ -853,20 +894,30 @@ export function createAWSTools(client: AWSClient): ToolSet {
         const result = await client.scanDynamoDBTable(tableName, {
           filterExpression,
           expressionAttributeNames,
-          expressionAttributeValues: expressionAttributeValues as Record<string, import('@aws-sdk/client-dynamodb').AttributeValue>,
+          expressionAttributeValues: expressionAttributeValues as Record<
+            string,
+            import('@aws-sdk/client-dynamodb').AttributeValue
+          >,
           limit,
           projectionExpression,
         });
-        console.log('[AWS] Scan returned', result.count, 'items (scanned', result.scannedCount, ')');
+        console.log(
+          '[AWS] Scan returned',
+          result.count,
+          'items (scanned',
+          result.scannedCount,
+          ')'
+        );
 
         return {
           tableName,
           count: result.count,
           scannedCount: result.scannedCount,
           items: result.items,
-          note: result.count < result.scannedCount
-            ? `Filter matched ${result.count} of ${result.scannedCount} scanned items`
-            : undefined,
+          note:
+            result.count < result.scannedCount
+              ? `Filter matched ${result.count} of ${result.scannedCount} scanned items`
+              : undefined,
         };
       } catch (error) {
         console.error('[AWS] Scan DynamoDB table error:', error);
@@ -898,9 +949,7 @@ export function createAWSTools(client: AWSClient): ToolSet {
     description:
       'Query a DynamoDB table by partition key (and optionally sort key). More efficient than scan because it only reads items matching the key condition. Use this when you know the partition key value.',
     inputSchema: z.object({
-      tableName: z
-        .string()
-        .describe('The name of the DynamoDB table to query'),
+      tableName: z.string().describe('The name of the DynamoDB table to query'),
       keyConditionExpression: z
         .string()
         .describe(
@@ -938,7 +987,9 @@ export function createAWSTools(client: AWSClient): ToolSet {
         .boolean()
         .optional()
         .default(true)
-        .describe('Sort order for sort key: true = ascending (oldest first), false = descending (newest first)'),
+        .describe(
+          'Sort order for sort key: true = ascending (oldest first), false = descending (newest first)'
+        ),
       indexName: z
         .string()
         .optional()
@@ -979,10 +1030,17 @@ export function createAWSTools(client: AWSClient): ToolSet {
       }
 
       try {
-        console.log('[AWS] Querying DynamoDB table:', tableName, indexName ? `(index: ${indexName})` : '');
+        console.log(
+          '[AWS] Querying DynamoDB table:',
+          tableName,
+          indexName ? `(index: ${indexName})` : ''
+        );
         const result = await client.queryDynamoDBTable(tableName, keyConditionExpression, {
           expressionAttributeNames,
-          expressionAttributeValues: expressionAttributeValues as Record<string, import('@aws-sdk/client-dynamodb').AttributeValue>,
+          expressionAttributeValues: expressionAttributeValues as Record<
+            string,
+            import('@aws-sdk/client-dynamodb').AttributeValue
+          >,
           filterExpression,
           limit,
           scanIndexForward,

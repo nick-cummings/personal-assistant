@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { UpdateFolderRequest } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 type RouteParams = { params: Promise<{ id: string }> };
 

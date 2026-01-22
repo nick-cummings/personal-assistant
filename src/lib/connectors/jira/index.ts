@@ -1,4 +1,4 @@
-import type { Connector, JiraConfig, ConnectionTestResult } from '../types';
+import type { ConnectionTestResult, Connector, JiraConfig } from '../types';
 import { JiraClient } from './client';
 import { createJiraTools } from './tools';
 

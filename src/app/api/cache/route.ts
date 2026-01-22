@@ -1,8 +1,5 @@
+import { cleanupExpiredCache, getCacheStats } from '@/lib/cache';
 import { NextResponse } from 'next/server';
-import {
-  getCacheStats,
-  cleanupExpiredCache,
-} from '@/lib/cache';
 
 /**
  * GET /api/cache - Get cache statistics
@@ -13,10 +10,7 @@ export async function GET() {
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Failed to get cache stats:', error);
-    return NextResponse.json(
-      { error: 'Failed to get cache statistics' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to get cache statistics' }, { status: 500 });
   }
 }
 
@@ -29,9 +23,6 @@ export async function DELETE() {
     return NextResponse.json({ cleaned: count });
   } catch (error) {
     console.error('Failed to cleanup cache:', error);
-    return NextResponse.json(
-      { error: 'Failed to cleanup cache' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to cleanup cache' }, { status: 500 });
   }
 }

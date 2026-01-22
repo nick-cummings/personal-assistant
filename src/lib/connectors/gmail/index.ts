@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, ToolSet } from '../types';
 import { GmailImapClient, type GmailImapConfig } from './client';
 import { createGmailTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet } from '../types';
 
 export class GmailConnector implements Connector<'gmail'> {
   type = 'gmail' as const;

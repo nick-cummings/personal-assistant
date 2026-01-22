@@ -53,9 +53,7 @@ function getInstances(): AtlassianInstance[] {
     extractHost(process.env.JIRA_BASE_URL);
 
   const email =
-    process.env.ATLASSIAN_EMAIL ||
-    process.env.CONFLUENCE_EMAIL ||
-    process.env.JIRA_EMAIL;
+    process.env.ATLASSIAN_EMAIL || process.env.CONFLUENCE_EMAIL || process.env.JIRA_EMAIL;
 
   const apiToken =
     process.env.ATLASSIAN_API_TOKEN ||
@@ -154,7 +152,9 @@ async function main() {
   console.log('--- Test 5: queryAllInstances - search("test", limit: 5) ---');
   let firstPage: { instance: string; id: string } | null = null;
   try {
-    const results = await client.queryAllInstances((instClient) => instClient.search('test', undefined, 5));
+    const results = await client.queryAllInstances((instClient) =>
+      instClient.search('test', undefined, 5)
+    );
     console.log(`Queried ${results.length} instance(s):`);
     for (const { instance, host, result } of results) {
       console.log(`\n  Instance: ${instance} (${host})`);
@@ -179,16 +179,13 @@ async function main() {
   if (firstPage) {
     console.log(`--- Test 6: getPage("${firstPage.id}") from instance "${firstPage.instance}" ---`);
     try {
-      const results = await client.queryAllInstances(
-        async (instClient) => {
-          try {
-            return await instClient.getPage(firstPage!.id);
-          } catch {
-            return null;
-          }
-        },
-        firstPage.instance
-      );
+      const results = await client.queryAllInstances(async (instClient) => {
+        try {
+          return await instClient.getPage(firstPage!.id);
+        } catch {
+          return null;
+        }
+      }, firstPage.instance);
       const found = results.find((r) => r.result !== null);
       if (found && found.result) {
         const page = found.result;
@@ -211,18 +208,17 @@ async function main() {
 
   // Test 7: Get page children from specific instance
   if (firstPage) {
-    console.log(`--- Test 7: getPageChildren("${firstPage.id}") from instance "${firstPage.instance}" ---`);
+    console.log(
+      `--- Test 7: getPageChildren("${firstPage.id}") from instance "${firstPage.instance}" ---`
+    );
     try {
-      const results = await client.queryAllInstances(
-        async (instClient) => {
-          try {
-            return await instClient.getPageChildren(firstPage!.id);
-          } catch {
-            return null;
-          }
-        },
-        firstPage.instance
-      );
+      const results = await client.queryAllInstances(async (instClient) => {
+        try {
+          return await instClient.getPageChildren(firstPage!.id);
+        } catch {
+          return null;
+        }
+      }, firstPage.instance);
       const found = results.find((r) => r.result !== null);
       if (found && found.result) {
         const children = found.result;
@@ -246,7 +242,9 @@ async function main() {
 
   // Test 8: Search within a specific space across instances
   if (firstSpace) {
-    console.log(`--- Test 8: search("guide", spaceKey: "${firstSpace.key}") from "${firstSpace.instance}" ---`);
+    console.log(
+      `--- Test 8: search("guide", spaceKey: "${firstSpace.key}") from "${firstSpace.instance}" ---`
+    );
     try {
       const results = await client.queryAllInstances(
         (instClient) => instClient.search('guide', firstSpace!.key, 3),
@@ -254,7 +252,9 @@ async function main() {
       );
       const found = results[0];
       if (found) {
-        console.log(`Found ${found.result.totalSize} results in space ${firstSpace.key} (${found.instance}):`);
+        console.log(
+          `Found ${found.result.totalSize} results in space ${firstSpace.key} (${found.instance}):`
+        );
         for (const r of found.result.results) {
           console.log(`  - [${r.content.id}] ${r.content.title}`);
         }
@@ -329,9 +329,12 @@ Features tested:
           console.log('  Space ID:', draft.spaceId);
           console.log('  Status:', draft.status);
           console.log('  URL:', `https://${instanceClient.host}/wiki${draft._links.webui}`);
-          console.log('  Edit URL:', draft._links.editui
-            ? `https://${instanceClient.host}/wiki${draft._links.editui}`
-            : `https://${instanceClient.host}/wiki/pages/resumedraft.action?draftId=${draft.id}`);
+          console.log(
+            '  Edit URL:',
+            draft._links.editui
+              ? `https://${instanceClient.host}/wiki${draft._links.editui}`
+              : `https://${instanceClient.host}/wiki/pages/resumedraft.action?draftId=${draft.id}`
+          );
           console.log('\n  ⚠️  Remember to delete this draft page manually in Confluence!');
         }
       }

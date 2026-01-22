@@ -28,9 +28,7 @@ async function searchChats(query: string): Promise<SearchResponse> {
     return { results: [] };
   }
 
-  const response = await fetch(
-    `/api/chats/search?q=${encodeURIComponent(query)}&limit=10`
-  );
+  const response = await fetch(`/api/chats/search?q=${encodeURIComponent(query)}&limit=10`);
 
   if (!response.ok) {
     throw new Error('Search failed');

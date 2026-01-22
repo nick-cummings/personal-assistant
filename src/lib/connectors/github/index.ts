@@ -1,4 +1,4 @@
-import type { Connector, GitHubConfig, ConnectionTestResult } from '../types';
+import type { ConnectionTestResult, Connector, GitHubConfig } from '../types';
 import { GitHubClient } from './client';
 import { createGitHubTools } from './tools';
 

@@ -55,7 +55,9 @@ async function main() {
   }
 
   // Test 3: List pull requests
-  console.log(`--- Test 3: listPullRequests("${TEST_REPO}", { state: "open", limit via slice }) ---`);
+  console.log(
+    `--- Test 3: listPullRequests("${TEST_REPO}", { state: "open", limit via slice }) ---`
+  );
   let firstPrNumber: number | null = null;
   try {
     const prs = await client.listPullRequests(TEST_REPO, { state: 'open' });
@@ -64,7 +66,9 @@ async function main() {
     for (const pr of limitedPrs) {
       console.log(`  - #${pr.number}: ${pr.title}`);
       console.log(`    Author: ${pr.user.login}, Branch: ${pr.head.ref} -> ${pr.base.ref}`);
-      console.log(`    Draft: ${pr.draft}, Labels: ${pr.labels.map((l) => l.name).join(', ') || 'None'}`);
+      console.log(
+        `    Draft: ${pr.draft}, Labels: ${pr.labels.map((l) => l.name).join(', ') || 'None'}`
+      );
       console.log();
       if (!firstPrNumber) {
         firstPrNumber = pr.number;
@@ -135,8 +139,12 @@ async function main() {
     console.log('Found', runs.length, 'workflow runs:');
     for (const run of runs) {
       console.log(`  - [${run.id}] ${run.name} #${run.run_number}`);
-      console.log(`    Branch: ${run.head_branch}, Status: ${run.status}, Conclusion: ${run.conclusion || 'N/A'}`);
-      console.log(`    Commit: "${run.head_commit.message.substring(0, 50)}..." by ${run.head_commit.author.name}`);
+      console.log(
+        `    Branch: ${run.head_branch}, Status: ${run.status}, Conclusion: ${run.conclusion || 'N/A'}`
+      );
+      console.log(
+        `    Commit: "${run.head_commit.message.substring(0, 50)}..." by ${run.head_commit.author.name}`
+      );
       console.log();
       if (!firstRunId) {
         firstRunId = run.id;
@@ -215,7 +223,9 @@ async function main() {
     console.log('Found', repos.length, 'repositories (showing up to 10):');
     for (const repo of repos) {
       console.log(`  - ${repo.full_name} (${repo.private ? 'private' : 'public'})`);
-      console.log(`    Language: ${repo.language || 'N/A'}, Stars: ${repo.stargazers_count}, Forks: ${repo.forks_count}`);
+      console.log(
+        `    Language: ${repo.language || 'N/A'}, Stars: ${repo.stargazers_count}, Forks: ${repo.forks_count}`
+      );
       console.log(`    Last pushed: ${repo.pushed_at}`);
     }
     console.log();

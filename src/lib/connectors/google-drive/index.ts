@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, GoogleDriveConfig, ToolSet } from '../types';
 import { GoogleDriveClient } from './client';
 import { createGoogleDriveTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GoogleDriveConfig } from '../types';
 
 export class GoogleDriveConnector implements Connector<'google-drive'> {
   type = 'google-drive' as const;
@@ -36,5 +36,5 @@ export class GoogleDriveConnector implements Connector<'google-drive'> {
   }
 }
 
-export { GoogleDriveClient, getGoogleDriveAuthUrl, exchangeGoogleDriveCode } from './client';
+export { exchangeGoogleDriveCode, getGoogleDriveAuthUrl, GoogleDriveClient } from './client';
 export { createGoogleDriveTools } from './tools';

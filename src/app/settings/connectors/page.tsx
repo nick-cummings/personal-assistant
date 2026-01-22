@@ -1,30 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Check, X, Loader2, Plug, Settings2, Trash2, ExternalLink } from 'lucide-react';
+import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import {
-  useConnectors,
-  useConnector,
-  useUpdateConnector,
-  useDeleteConnector,
-  useTestConnector,
-  type ConnectorListItem,
+    useConnector, useConnectors, useDeleteConnector,
+    useTestConnector, useUpdateConnector, type ConnectorListItem
 } from '@/hooks/use-connectors';
 import type { ConnectorType } from '@/types';
+import { ArrowLeft, Check, ExternalLink, Loader2, Plug, Settings2, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 // OAuth-based connectors that need a "Connect" button after saving credentials
 const OAUTH_CONNECTORS: ConnectorType[] = [
@@ -184,9 +180,7 @@ function ConnectorCard({
                   Test
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                {testResult?.error || 'Test connection'}
-              </TooltipContent>
+              <TooltipContent>{testResult?.error || 'Test connection'}</TooltipContent>
             </Tooltip>
             <div className="bg-border h-6 w-px" />
             <Switch
@@ -312,14 +306,13 @@ function ConnectorConfigDialog({
               {isOAuthConnector && connector?.configured && (
                 <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Step 2:</strong> After saving your credentials, click &quot;Connect&quot; below to authorize access to your account.
+                    <strong>Step 2:</strong> After saving your credentials, click
+                    &quot;Connect&quot; below to authorize access to your account.
                   </p>
                 </div>
               )}
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
 
             <DialogFooter className="flex-col gap-2 sm:flex-row">

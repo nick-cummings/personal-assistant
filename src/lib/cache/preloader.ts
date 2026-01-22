@@ -1,23 +1,12 @@
+import type {
+    AWSConfig, ConfluenceConfig, GitHubConfig, GmailConfig,
+    GoogleCalendarConfig,
+    GoogleDriveConfig, JenkinsConfig, JiraConfig, OutlookConfig
+} from '@/lib/connectors/types';
 import { db } from '@/lib/db';
 import { decryptJson } from '@/lib/utils/crypto';
-import {
-  getCachedData,
-  setCachedData,
-  CACHE_TTL,
-  CACHE_KEYS,
-} from './service';
 import type { ConnectorType } from '@/types';
-import type {
-  GitHubConfig,
-  JiraConfig,
-  ConfluenceConfig,
-  JenkinsConfig,
-  AWSConfig,
-  OutlookConfig,
-  GmailConfig,
-  GoogleCalendarConfig,
-  GoogleDriveConfig,
-} from '@/lib/connectors/types';
+import { CACHE_KEYS, CACHE_TTL, getCachedData, setCachedData } from './service';
 
 /**
  * Preload configuration for each connector type
@@ -41,10 +30,7 @@ const PRELOAD_CONFIGS: Partial<Record<ConnectorType, PreloadConfig[]>> = {
         const { GitHubClient } = await import('@/lib/connectors/github/client');
         const client = new GitHubClient(config);
         // Preload recent PRs authored by user
-        return client.listPullRequests(
-          config.defaultOwner || '',
-          { state: 'open' }
-        );
+        return client.listPullRequests(config.defaultOwner || '', { state: 'open' });
       },
       ttl: CACHE_TTL.MEDIUM,
     },
@@ -260,13 +246,15 @@ export async function preloadAllConnectorCaches(): Promise<PreloadResult[]> {
 /**
  * Check if cache needs refresh for any connector
  */
-export async function getCacheStatus(): Promise<{
-  connectorId: string;
-  type: string;
-  cacheKey: string;
-  isStale: boolean;
-  expiresAt: Date | null;
-}[]> {
+export async function getCacheStatus(): Promise<
+  {
+    connectorId: string;
+    type: string;
+    cacheKey: string;
+    isStale: boolean;
+    expiresAt: Date | null;
+  }[]
+> {
   const connectors = await db.connector.findMany({
     where: { enabled: true },
     include: { cachedData: true },
@@ -286,9 +274,7 @@ export async function getCacheStatus(): Promise<{
     const preloadConfigs = PRELOAD_CONFIGS[connector.type as ConnectorType] || [];
 
     for (const preloadConfig of preloadConfigs) {
-      const cached = connector.cachedData.find(
-        (c) => c.cacheKey === preloadConfig.cacheKey
-      );
+      const cached = connector.cachedData.find((c) => c.cacheKey === preloadConfig.cacheKey);
 
       status.push({
         connectorId: connector.id,

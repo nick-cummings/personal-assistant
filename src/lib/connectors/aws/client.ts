@@ -1,55 +1,32 @@
 import {
-  CloudWatchLogsClient,
-  DescribeLogGroupsCommand,
-  FilterLogEventsCommand,
-  type LogGroup,
-  type FilteredLogEvent,
+    CloudWatchLogsClient,
+    DescribeLogGroupsCommand,
+    FilterLogEventsCommand, type FilteredLogEvent, type LogGroup
 } from '@aws-sdk/client-cloudwatch-logs';
 import {
-  CodePipelineClient,
-  ListPipelinesCommand,
-  GetPipelineStateCommand,
-  type PipelineSummary,
-  type StageState,
-} from '@aws-sdk/client-codepipeline';
-import {
-  CodeBuildClient,
-  ListBuildsForProjectCommand,
-  BatchGetBuildsCommand,
-  type Build,
+    BatchGetBuildsCommand, CodeBuildClient,
+    ListBuildsForProjectCommand, type Build
 } from '@aws-sdk/client-codebuild';
 import {
-  ECSClient,
-  ListServicesCommand,
-  DescribeServicesCommand,
-  type Service,
-} from '@aws-sdk/client-ecs';
+    CodePipelineClient, GetPipelineStateCommand, ListPipelinesCommand, type PipelineSummary,
+    type StageState
+} from '@aws-sdk/client-codepipeline';
 import {
-  LambdaClient,
-  GetFunctionCommand,
-  ListFunctionsCommand,
-  type FunctionConfiguration,
-} from '@aws-sdk/client-lambda';
+    DescribeTableCommand, DynamoDBClient,
+    ListTablesCommand, QueryCommand, ScanCommand, type AttributeValue, type TableDescription
+} from '@aws-sdk/client-dynamodb';
 import {
-  EC2Client,
-  DescribeInstancesCommand,
-  type Instance,
-  type Reservation,
+    DescribeInstancesCommand, EC2Client, type Instance
 } from '@aws-sdk/client-ec2';
 import {
-  S3Client,
-  ListBucketsCommand,
-  type Bucket,
-} from '@aws-sdk/client-s3';
+    DescribeServicesCommand, ECSClient,
+    ListServicesCommand, type Service
+} from '@aws-sdk/client-ecs';
 import {
-  DynamoDBClient,
-  ListTablesCommand,
-  DescribeTableCommand,
-  ScanCommand,
-  QueryCommand,
-  type TableDescription,
-  type AttributeValue,
-} from '@aws-sdk/client-dynamodb';
+    GetFunctionCommand, LambdaClient, ListFunctionsCommand,
+    type FunctionConfiguration
+} from '@aws-sdk/client-lambda';
+import { ListBucketsCommand, S3Client, type Bucket } from '@aws-sdk/client-s3';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import type { AWSConfig } from '../types';
 
@@ -168,10 +145,7 @@ export class AWSClient {
   }
 
   // CodeBuild
-  async getBuildStatus(
-    projectName: string,
-    limit: number = 5
-  ): Promise<Build[]> {
+  async getBuildStatus(projectName: string, limit: number = 5): Promise<Build[]> {
     // First get build IDs
     const listCommand = new ListBuildsForProjectCommand({
       projectName,
@@ -191,10 +165,7 @@ export class AWSClient {
   }
 
   // ECS
-  async describeECSServices(
-    clusterName: string,
-    serviceName?: string
-  ): Promise<Service[]> {
+  async describeECSServices(clusterName: string, serviceName?: string): Promise<Service[]> {
     if (serviceName) {
       // Get specific service
       const command = new DescribeServicesCommand({

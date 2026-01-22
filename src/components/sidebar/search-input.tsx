@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, X, MessageSquare, Folder, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppStore } from '@/stores/app-store';
 import { useChatSearch, type SearchResult } from '@/hooks/use-chat-search';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/stores/app-store';
+import { Folder, Loader2, MessageSquare, Search, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 export function SearchInput() {
   const router = useRouter();
@@ -64,7 +64,7 @@ export function SearchInput() {
         onChange={(e) => setSearchQuery(e.target.value)}
         onFocus={() => searchQuery.length >= 2 && setIsOpen(true)}
         onKeyDown={handleKeyDown}
-        className="pl-8 pr-8"
+        className="pr-8 pl-8"
       />
       {searchQuery && (
         <Button
@@ -82,16 +82,14 @@ export function SearchInput() {
 
       {/* Search Results Dropdown */}
       {isOpen && searchQuery.length >= 2 && (
-        <div className="bg-popover absolute top-full left-2 right-2 z-50 mt-1 rounded-md border shadow-lg">
+        <div className="bg-popover absolute top-full right-2 left-2 z-50 mt-1 rounded-md border shadow-lg">
           <ScrollArea className="max-h-80">
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
               </div>
             ) : results.length === 0 ? (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                No results found
-              </div>
+              <div className="text-muted-foreground py-6 text-center text-sm">No results found</div>
             ) : (
               <div className="py-1">
                 {results.map((result) => (

@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { MessageSquare, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCreateChat } from '@/hooks/use-chats';
+import { MessageSquare, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function ChatPage() {
   const router = useRouter();

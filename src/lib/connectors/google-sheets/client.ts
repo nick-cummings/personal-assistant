@@ -1,10 +1,8 @@
 import {
-  OAuthClient,
-  buildOAuthAuthUrl,
-  exchangeOAuthCode,
-  type OAuthConfig,
-  type OAuthProviderConfig,
-  type TokenResponse,
+    buildOAuthAuthUrl,
+    exchangeOAuthCode, OAuthClient, type OAuthConfig,
+    type OAuthProviderConfig,
+    type TokenResponse
 } from '../shared/oauth-client';
 
 interface Spreadsheet {
@@ -98,18 +96,23 @@ export class GoogleSheetsClient extends OAuthClient<OAuthConfig> {
     return { headers, rows };
   }
 
-  async listSpreadsheets(query?: string, maxResults: number = 20): Promise<Array<{
-    id: string;
-    name: string;
-    modifiedTime: string;
-    webViewLink: string;
-  }>> {
+  async listSpreadsheets(
+    query?: string,
+    maxResults: number = 20
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      modifiedTime: string;
+      webViewLink: string;
+    }>
+  > {
     const params = new URLSearchParams({
       pageSize: maxResults.toString(),
       fields: 'files(id,name,modifiedTime,webViewLink)',
     });
 
-    const queryParts = ["mimeType = 'application/vnd.google-apps.spreadsheet'", "trashed = false"];
+    const queryParts = ["mimeType = 'application/vnd.google-apps.spreadsheet'", 'trashed = false'];
     if (query) {
       queryParts.push(`name contains '${query}'`);
     }
@@ -123,18 +126,23 @@ export class GoogleSheetsClient extends OAuthClient<OAuthConfig> {
     return response.files || [];
   }
 
-  async searchSpreadsheets(query: string): Promise<Array<{
-    id: string;
-    name: string;
-    modifiedTime: string;
-    webViewLink: string;
-  }>> {
+  async searchSpreadsheets(query: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      modifiedTime: string;
+      webViewLink: string;
+    }>
+  > {
     const params = new URLSearchParams({
       pageSize: '50',
       fields: 'files(id,name,modifiedTime,webViewLink)',
     });
 
-    params.set('q', `mimeType = 'application/vnd.google-apps.spreadsheet' and fullText contains '${query}' and trashed = false`);
+    params.set(
+      'q',
+      `mimeType = 'application/vnd.google-apps.spreadsheet' and fullText contains '${query}' and trashed = false`
+    );
 
     const response = await this.fetchDrive<{
       files: Array<{ id: string; name: string; modifiedTime: string; webViewLink: string }>;

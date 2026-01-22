@@ -77,13 +77,17 @@ export class GmailImapClient {
         const recentUids = searchResult.slice(-maxResults).reverse();
 
         for (const uid of recentUids) {
-          const message = await client.fetchOne(String(uid), {
-            envelope: true,
-            flags: true,
-            bodyStructure: true,
-            source: true,
-            labels: true,
-          }, { uid: true });
+          const message = await client.fetchOne(
+            String(uid),
+            {
+              envelope: true,
+              flags: true,
+              bodyStructure: true,
+              source: true,
+              labels: true,
+            },
+            { uid: true }
+          );
 
           if (message && message.source) {
             const parsed = await simpleParser(message.source);
@@ -108,13 +112,17 @@ export class GmailImapClient {
       const lock = await client.getMailboxLock('[Gmail]/All Mail');
 
       try {
-        const message = await client.fetchOne(messageId, {
-          envelope: true,
-          flags: true,
-          bodyStructure: true,
-          source: true,
-          labels: true,
-        }, { uid: true });
+        const message = await client.fetchOne(
+          messageId,
+          {
+            envelope: true,
+            flags: true,
+            bodyStructure: true,
+            source: true,
+            labels: true,
+          },
+          { uid: true }
+        );
 
         if (!message || !message.source) {
           throw new Error('Message not found');
@@ -228,10 +236,12 @@ export class GmailImapClient {
       id: uid,
       subject: envelope.subject || '(No Subject)',
       from: from ? `${from.name || ''} <${from.address || ''}>`.trim() : 'Unknown',
-      to: to.map((t: { name?: string; address?: string }) => `${t.name || ''} <${t.address || ''}>`.trim()),
+      to: to.map((t: { name?: string; address?: string }) =>
+        `${t.name || ''} <${t.address || ''}>`.trim()
+      ),
       date: envelope.date?.toISOString() || new Date().toISOString(),
       snippet: (parsed.text || '').substring(0, 200),
-      body: includeBody ? (parsed.text || parsed.html || '') : undefined,
+      body: includeBody ? parsed.text || parsed.html || '' : undefined,
       isRead: flags.has('\\Seen'),
       hasAttachments: (parsed.attachments?.length || 0) > 0,
       labels: Array.isArray(labels) ? labels : [],

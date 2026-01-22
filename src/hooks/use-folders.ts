@@ -1,7 +1,7 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { FolderWithChildren, CreateFolderRequest, UpdateFolderRequest } from '@/types';
+import type { CreateFolderRequest, FolderWithChildren, UpdateFolderRequest } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const FOLDERS_KEY = ['folders'];
 

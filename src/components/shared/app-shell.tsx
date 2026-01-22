@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, type ReactNode } from 'react';
-import { CommandPalette } from './command-palette';
 import { useAppKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useCallback, useState, type ReactNode } from 'react';
+import { CommandPalette } from './command-palette';
 
 interface AppShellProps {
   children: ReactNode;
@@ -27,10 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <>
       {children}
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-      />
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
     </>
   );
 }

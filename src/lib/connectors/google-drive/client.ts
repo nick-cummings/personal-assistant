@@ -1,10 +1,8 @@
 import {
-  OAuthClient,
-  buildOAuthAuthUrl,
-  exchangeOAuthCode,
-  type OAuthConfig,
-  type OAuthProviderConfig,
-  type TokenResponse,
+    buildOAuthAuthUrl,
+    exchangeOAuthCode, OAuthClient, type OAuthConfig,
+    type OAuthProviderConfig,
+    type TokenResponse
 } from '../shared/oauth-client';
 
 interface DriveFile {
@@ -50,7 +48,8 @@ export class GoogleDriveClient extends OAuthClient<OAuthConfig> {
   ): Promise<{ files: DriveFile[]; nextPageToken?: string }> {
     const params = new URLSearchParams({
       pageSize: pageSize.toString(),
-      fields: 'nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,parents,owners)',
+      fields:
+        'nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,parents,owners)',
     });
 
     const queryParts: string[] = [];
@@ -60,7 +59,7 @@ export class GoogleDriveClient extends OAuthClient<OAuthConfig> {
     if (folderId) {
       queryParts.push(`'${folderId}' in parents`);
     }
-    queryParts.push("trashed = false");
+    queryParts.push('trashed = false');
 
     params.set('q', queryParts.join(' and '));
 
@@ -103,16 +102,14 @@ export class GoogleDriveClient extends OAuthClient<OAuthConfig> {
       fields: 'files(id,name,parents)',
     });
 
-    const queryParts = ["mimeType = 'application/vnd.google-apps.folder'", "trashed = false"];
+    const queryParts = ["mimeType = 'application/vnd.google-apps.folder'", 'trashed = false'];
     if (parentId) {
       queryParts.push(`'${parentId}' in parents`);
     }
 
     params.set('q', queryParts.join(' and '));
 
-    const response = await this.fetch<{ files: DriveFolder[] }>(
-      `/files?${params.toString()}`
-    );
+    const response = await this.fetch<{ files: DriveFolder[] }>(`/files?${params.toString()}`);
 
     return response.files || [];
   }
@@ -123,16 +120,14 @@ export class GoogleDriveClient extends OAuthClient<OAuthConfig> {
       fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,owners)',
     });
 
-    const queryParts = [`fullText contains '${query}'`, "trashed = false"];
+    const queryParts = [`fullText contains '${query}'`, 'trashed = false'];
     if (mimeType) {
       queryParts.push(`mimeType = '${mimeType}'`);
     }
 
     params.set('q', queryParts.join(' and '));
 
-    const response = await this.fetch<{ files: DriveFile[] }>(
-      `/files?${params.toString()}`
-    );
+    const response = await this.fetch<{ files: DriveFile[] }>(`/files?${params.toString()}`);
 
     return response.files || [];
   }

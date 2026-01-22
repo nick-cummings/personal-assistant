@@ -1,4 +1,4 @@
-import type { ConfluenceConfig, AtlassianInstance } from '../types';
+import type { AtlassianInstance, ConfluenceConfig } from '../types';
 
 // Confluence API response types
 interface ConfluenceSpace {
@@ -108,7 +108,11 @@ export class ConfluenceInstanceClient {
     return response.results;
   }
 
-  async search(query: string, spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
+  async search(
+    query: string,
+    spaceKey?: string,
+    limit: number = 20
+  ): Promise<ConfluenceSearchResult> {
     const cqlParts: string[] = [];
 
     // Add text search
@@ -142,43 +146,43 @@ export class ConfluenceInstanceClient {
     const data = await response.json();
 
     return {
-      results: data.results.map((r: {
-        id: string;
-        title: string;
-        type: string;
-        status: string;
-        space?: { key: string };
-        version?: { number: number; when: string; by?: { accountId: string } };
-        _links: { webui: string };
-        excerpt?: string;
-      }) => ({
-        content: {
-          id: r.id,
-          title: r.title,
-          type: r.type,
-          status: r.status,
-          spaceId: r.space?.key ?? '',
-          authorId: r.version?.by?.accountId ?? '',
-          createdAt: r.version?.when ?? '',
-          version: {
-            number: r.version?.number ?? 1,
-            createdAt: r.version?.when ?? '',
+      results: data.results.map(
+        (r: {
+          id: string;
+          title: string;
+          type: string;
+          status: string;
+          space?: { key: string };
+          version?: { number: number; when: string; by?: { accountId: string } };
+          _links: { webui: string };
+          excerpt?: string;
+        }) => ({
+          content: {
+            id: r.id,
+            title: r.title,
+            type: r.type,
+            status: r.status,
+            spaceId: r.space?.key ?? '',
             authorId: r.version?.by?.accountId ?? '',
+            createdAt: r.version?.when ?? '',
+            version: {
+              number: r.version?.number ?? 1,
+              createdAt: r.version?.when ?? '',
+              authorId: r.version?.by?.accountId ?? '',
+            },
+            _links: r._links,
           },
-          _links: r._links,
-        },
-        excerpt: r.excerpt ?? '',
-        lastModified: r.version?.when ?? '',
-      })),
+          excerpt: r.excerpt ?? '',
+          lastModified: r.version?.when ?? '',
+        })
+      ),
       totalSize: data.totalSize ?? data.results.length,
       _links: data._links ?? {},
     };
   }
 
   async getPage(pageId: string): Promise<ConfluencePage & { bodyContent: string }> {
-    const page = await this.fetch<ConfluencePage>(
-      `/pages/${pageId}?body-format=storage`
-    );
+    const page = await this.fetch<ConfluencePage>(`/pages/${pageId}?body-format=storage`);
 
     // Extract body content
     let bodyContent = '';
@@ -194,9 +198,7 @@ export class ConfluenceInstanceClient {
   }
 
   async getPageChildren(pageId: string): Promise<ConfluencePage[]> {
-    const response = await this.fetch<ConfluencePageResponse>(
-      `/pages/${pageId}/children?limit=50`
-    );
+    const response = await this.fetch<ConfluencePageResponse>(`/pages/${pageId}/children?limit=50`);
     return response.results;
   }
 
@@ -283,34 +285,36 @@ export class ConfluenceInstanceClient {
     const data = await response.json();
 
     return {
-      results: data.results.map((r: {
-        id: string;
-        title: string;
-        type: string;
-        status: string;
-        space?: { key: string };
-        version?: { number: number; when: string; by?: { accountId: string } };
-        _links: { webui: string };
-        excerpt?: string;
-      }) => ({
-        content: {
-          id: r.id,
-          title: r.title || '(Untitled Draft)',
-          type: r.type,
-          status: r.status,
-          spaceId: r.space?.key ?? '',
-          authorId: r.version?.by?.accountId ?? '',
-          createdAt: r.version?.when ?? '',
-          version: {
-            number: r.version?.number ?? 1,
-            createdAt: r.version?.when ?? '',
+      results: data.results.map(
+        (r: {
+          id: string;
+          title: string;
+          type: string;
+          status: string;
+          space?: { key: string };
+          version?: { number: number; when: string; by?: { accountId: string } };
+          _links: { webui: string };
+          excerpt?: string;
+        }) => ({
+          content: {
+            id: r.id,
+            title: r.title || '(Untitled Draft)',
+            type: r.type,
+            status: r.status,
+            spaceId: r.space?.key ?? '',
             authorId: r.version?.by?.accountId ?? '',
+            createdAt: r.version?.when ?? '',
+            version: {
+              number: r.version?.number ?? 1,
+              createdAt: r.version?.when ?? '',
+              authorId: r.version?.by?.accountId ?? '',
+            },
+            _links: r._links,
           },
-          _links: r._links,
-        },
-        excerpt: r.excerpt ?? '',
-        lastModified: r.version?.when ?? '',
-      })),
+          excerpt: r.excerpt ?? '',
+          lastModified: r.version?.when ?? '',
+        })
+      ),
       totalSize: data.size ?? data.results.length,
       _links: data._links ?? {},
     };
@@ -426,7 +430,11 @@ export class ConfluenceClient {
     return first.listSpaces();
   }
 
-  async search(query: string, spaceKey?: string, limit: number = 20): Promise<ConfluenceSearchResult> {
+  async search(
+    query: string,
+    spaceKey?: string,
+    limit: number = 20
+  ): Promise<ConfluenceSearchResult> {
     const first = this.getAllInstances()[0];
     if (!first) throw new Error('No Confluence instances configured');
     return first.search(query, spaceKey, limit);

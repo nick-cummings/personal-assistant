@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { CreateChatRequest } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/chats - List all chats
 export async function GET(request: NextRequest) {

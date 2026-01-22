@@ -1,26 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  RefreshCw,
-  Clock,
-  Loader2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConnectors, useTestConnector } from '@/hooks/use-connectors';
 import { cn } from '@/lib/utils';
 import type { ConnectorType } from '@/types';
+import { AlertCircle, CheckCircle2, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 interface ConnectorStatus {
   type: string;
@@ -30,10 +17,7 @@ interface ConnectorStatus {
   status: 'healthy' | 'unhealthy' | 'unknown' | 'testing';
 }
 
-function getStatusInfo(connector: {
-  enabled: boolean;
-  lastHealthy: string | null;
-}) {
+function getStatusInfo(connector: { enabled: boolean; lastHealthy: string | null }) {
   if (!connector.enabled) {
     return {
       status: 'disabled' as const,
@@ -109,25 +93,20 @@ function ConnectorHealthCard({ connector, onTest, isTesting }: ConnectorCardProp
 
   return (
     <div
-      className={cn(
-        'flex items-center justify-between p-4 rounded-lg border',
-        statusInfo.bgColor
-      )}
+      className={cn('flex items-center justify-between rounded-lg border p-4', statusInfo.bgColor)}
     >
       <div className="flex items-center gap-3">
-        <div className={cn('p-2 rounded-full', statusInfo.bgColor)}>
+        <div className={cn('rounded-full p-2', statusInfo.bgColor)}>
           {isTesting ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
           ) : (
             <StatusIcon className={cn('h-5 w-5', statusInfo.color)} />
           )}
         </div>
         <div>
           <div className="font-medium">{connector.name}</div>
-          <div className="text-sm text-muted-foreground">
-            {connector.enabled
-              ? formatLastHealthy(connector.lastHealthy)
-              : 'Disabled'}
+          <div className="text-muted-foreground text-sm">
+            {connector.enabled ? formatLastHealthy(connector.lastHealthy) : 'Disabled'}
           </div>
         </div>
       </div>
@@ -163,9 +142,7 @@ function ConnectorHealthCard({ connector, onTest, isTesting }: ConnectorCardProp
 export function ConnectorHealthDashboard() {
   const { data: connectors, isLoading } = useConnectors();
   const testConnector = useTestConnector();
-  const [testingConnectors, setTestingConnectors] = useState<Set<string>>(
-    new Set()
-  );
+  const [testingConnectors, setTestingConnectors] = useState<Set<string>>(new Set());
 
   const handleTestConnector = async (type: ConnectorType) => {
     setTestingConnectors((prev) => new Set(prev).add(type));
@@ -196,7 +173,7 @@ export function ConnectorHealthDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
           </div>
         </CardContent>
       </Card>
@@ -230,10 +207,7 @@ export function ConnectorHealthDashboard() {
               disabled={testingConnectors.size > 0}
             >
               <RefreshCw
-                className={cn(
-                  'h-4 w-4 mr-2',
-                  testingConnectors.size > 0 && 'animate-spin'
-                )}
+                className={cn('mr-2 h-4 w-4', testingConnectors.size > 0 && 'animate-spin')}
               />
               Test All
             </Button>
@@ -242,7 +216,7 @@ export function ConnectorHealthDashboard() {
       </CardHeader>
       <CardContent className="space-y-3">
         {enabledConnectors.length === 0 && disabledConnectors.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-muted-foreground py-4 text-center text-sm">
             No connectors configured. Add connectors in Settings → Connectors.
           </p>
         ) : (
@@ -256,8 +230,8 @@ export function ConnectorHealthDashboard() {
               />
             ))}
             {disabledConnectors.length > 0 && enabledConnectors.length > 0 && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground mb-2">
+              <div className="border-t pt-2">
+                <p className="text-muted-foreground mb-2 text-xs">
                   Disabled ({disabledConnectors.length})
                 </p>
                 {disabledConnectors.map((connector) => (

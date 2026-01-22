@@ -1,14 +1,9 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
-  Chat,
-  ChatWithMessages,
-  ChatWithFolder,
-  CreateChatRequest,
-  UpdateChatRequest,
-  CreateMessageRequest,
+    Chat, ChatWithFolder, ChatWithMessages, CreateChatRequest, CreateMessageRequest, UpdateChatRequest
 } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const CHATS_KEY = ['chats'];
 const FOLDERS_KEY = ['folders'];

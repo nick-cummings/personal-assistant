@@ -55,7 +55,9 @@ async function main() {
     const folders = await client.listFolders();
     console.log('Found', folders.length, 'folders:');
     for (const folder of folders) {
-      console.log(`  - ${folder.name} (${folder.id}): ${folder.messageCount} messages, ${folder.unreadCount} unread`);
+      console.log(
+        `  - ${folder.name} (${folder.id}): ${folder.messageCount} messages, ${folder.unreadCount} unread`
+      );
     }
     console.log();
   } catch (error) {

@@ -1,5 +1,6 @@
-import type { Tool } from 'ai';
 import type { ConnectorType } from '@/types';
+import type { Tool } from 'ai';
+import type { OAuthConfig } from './shared/oauth-client';
 
 // Tool result returned by connector tool execution
 export interface ToolResult {
@@ -78,7 +79,6 @@ export interface OutlookConfig extends BaseConnectorConfig {
 // Standard OAuth connector config (used by Gmail, Yahoo, Google services)
 // Re-exported from shared module for convenience
 export type { OAuthConfig } from './shared/oauth-client';
-import type { OAuthConfig } from './shared/oauth-client';
 
 // Gmail connector config (IMAP with App Password)
 export interface GmailConfig extends BaseConnectorConfig {

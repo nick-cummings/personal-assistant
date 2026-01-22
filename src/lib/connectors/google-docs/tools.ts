@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GoogleDocsClient } from './client';
 import type { ToolSet } from '../types';
+import type { GoogleDocsClient } from './client';
 
 export function createGoogleDocsTools(client: GoogleDocsClient): ToolSet {
   return {

@@ -2,12 +2,10 @@ import { db } from '@/lib/db';
 import { decryptJson } from '@/lib/utils/crypto';
 import type { ConnectorType } from '@/types';
 import type {
-  Connector,
-  ConnectorConfigMap,
-  ConnectorConstructor,
-  ConnectorMetadata,
-  ConfigField,
-  ToolSet,
+    ConfigField, Connector,
+    ConnectorConfigMap,
+    ConnectorConstructor,
+    ConnectorMetadata, ToolSet
 } from './types';
 
 // Registry of connector constructors
@@ -1069,14 +1067,15 @@ function getEnvConfig<T extends ConnectorType>(type: T): ConnectorConfigMap[T] |
         process.env.ATLASSIAN_BASE_URL || // Common alternative naming
         process.env[`${type.toUpperCase()}_HOST`] ||
         process.env[`${type.toUpperCase()}_BASE_URL`];
-      const email =
-        process.env.ATLASSIAN_EMAIL || process.env[`${type.toUpperCase()}_EMAIL`];
+      const email = process.env.ATLASSIAN_EMAIL || process.env[`${type.toUpperCase()}_EMAIL`];
       const apiToken =
         process.env.ATLASSIAN_API_TOKEN || process.env[`${type.toUpperCase()}_API_TOKEN`];
       if (host && email && apiToken) {
         const name = process.env.ATLASSIAN_INSTANCE_NAME || 'Default';
         return {
-          instances: [{ name, host: host.replace(/^https?:\/\//, '').replace(/\/$/, ''), email, apiToken }],
+          instances: [
+            { name, host: host.replace(/^https?:\/\//, '').replace(/\/$/, ''), email, apiToken },
+          ],
         } as ConnectorConfigMap[T];
       }
       return null;

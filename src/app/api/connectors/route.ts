@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { getAllConnectorMetadata } from '@/lib/connectors';
-import type { ConnectorType } from '@/types';
+import { db } from '@/lib/db';
+import { NextResponse } from 'next/server';
 
 // GET /api/connectors - List all connectors with status
 export async function GET() {

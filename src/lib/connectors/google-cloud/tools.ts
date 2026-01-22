@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GoogleCloudClient } from './client';
 import type { ToolSet } from '../types';
+import type { GoogleCloudClient } from './client';
 
 export function createGoogleCloudTools(client: GoogleCloudClient): ToolSet {
   return {

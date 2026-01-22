@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GoogleCalendarClient } from './client';
 import type { ToolSet } from '../types';
+import type { GoogleCalendarClient } from './client';
 
 export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet {
   return {
@@ -26,7 +26,11 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
     google_calendar_get_todays_events: tool({
       description: "Get today's events from a calendar",
       inputSchema: z.object({
-        calendarId: z.string().optional().default('primary').describe('Calendar ID (default: primary)'),
+        calendarId: z
+          .string()
+          .optional()
+          .default('primary')
+          .describe('Calendar ID (default: primary)'),
       }),
       execute: async ({ calendarId }) => {
         const events = await client.getTodaysEvents(calendarId);
@@ -40,7 +44,11 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
     google_calendar_get_upcoming: tool({
       description: 'Get upcoming events from a calendar',
       inputSchema: z.object({
-        calendarId: z.string().optional().default('primary').describe('Calendar ID (default: primary)'),
+        calendarId: z
+          .string()
+          .optional()
+          .default('primary')
+          .describe('Calendar ID (default: primary)'),
         days: z.number().optional().default(7).describe('Number of days ahead to look'),
         maxResults: z.number().optional().default(50).describe('Maximum number of events'),
       }),
@@ -57,7 +65,11 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
       description: 'Search for events by keyword',
       inputSchema: z.object({
         query: z.string().describe('Search query'),
-        calendarId: z.string().optional().default('primary').describe('Calendar ID (default: primary)'),
+        calendarId: z
+          .string()
+          .optional()
+          .default('primary')
+          .describe('Calendar ID (default: primary)'),
       }),
       execute: async ({ query, calendarId }) => {
         const events = await client.searchEvents(query, calendarId);
@@ -72,7 +84,11 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
       description: 'Get details of a specific calendar event',
       inputSchema: z.object({
         eventId: z.string().describe('The ID of the event'),
-        calendarId: z.string().optional().default('primary').describe('Calendar ID (default: primary)'),
+        calendarId: z
+          .string()
+          .optional()
+          .default('primary')
+          .describe('Calendar ID (default: primary)'),
       }),
       execute: async ({ eventId, calendarId }) => {
         const event = await client.getEvent(calendarId, eventId);
@@ -85,7 +101,10 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
       inputSchema: z.object({
         startTime: z.string().describe('Start time in ISO 8601 format'),
         endTime: z.string().describe('End time in ISO 8601 format'),
-        calendarIds: z.array(z.string()).optional().default(['primary'])
+        calendarIds: z
+          .array(z.string())
+          .optional()
+          .default(['primary'])
           .describe('Calendar IDs to check (default: primary)'),
       }),
       execute: async ({ startTime, endTime, calendarIds }) => {
@@ -102,19 +121,22 @@ export function createGoogleCalendarTools(client: GoogleCalendarClient): ToolSet
   };
 }
 
-function formatEvent(event: {
-  id: string;
-  summary?: string;
-  description?: string;
-  location?: string;
-  start: { dateTime?: string; date?: string };
-  end: { dateTime?: string; date?: string };
-  status?: string;
-  htmlLink?: string;
-  organizer?: { email: string; displayName?: string };
-  attendees?: Array<{ email: string; displayName?: string; responseStatus?: string }>;
-  conferenceData?: { entryPoints?: Array<{ entryPointType: string; uri: string }> };
-}, includeDetails: boolean = false) {
+function formatEvent(
+  event: {
+    id: string;
+    summary?: string;
+    description?: string;
+    location?: string;
+    start: { dateTime?: string; date?: string };
+    end: { dateTime?: string; date?: string };
+    status?: string;
+    htmlLink?: string;
+    organizer?: { email: string; displayName?: string };
+    attendees?: Array<{ email: string; displayName?: string; responseStatus?: string }>;
+    conferenceData?: { entryPoints?: Array<{ entryPointType: string; uri: string }> };
+  },
+  includeDetails: boolean = false
+) {
   const base = {
     id: event.id,
     title: event.summary || '(No title)',
@@ -133,10 +155,12 @@ function formatEvent(event: {
   return {
     ...base,
     description: event.description,
-    organizer: event.organizer ? {
-      name: event.organizer.displayName,
-      email: event.organizer.email,
-    } : undefined,
+    organizer: event.organizer
+      ? {
+          name: event.organizer.displayName,
+          email: event.organizer.email,
+        }
+      : undefined,
     attendees: event.attendees?.map((a) => ({
       name: a.displayName,
       email: a.email,

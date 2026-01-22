@@ -1,9 +1,9 @@
-import { streamText, generateText, stepCountIs, type ModelMessage } from 'ai';
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
 import { getModel } from '@/lib/ai/client';
 import { buildSystemPrompt, generateTitlePrompt } from '@/lib/ai/prompts';
 import { getAllConnectorTools } from '@/lib/connectors';
+import { db } from '@/lib/db';
+import { generateText, stepCountIs, streamText, type ModelMessage } from 'ai';
+import { NextRequest } from 'next/server';
 
 // Import connectors to ensure they're registered
 import '@/lib/connectors';
@@ -86,6 +86,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Track tool calls as they happen
+    const collectedToolCalls: Array<{
+      id: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+
     // Stream the response
     const result = streamText({
       model,
@@ -94,10 +101,18 @@ export async function POST(request: NextRequest) {
       tools,
       stopWhen: stepCountIs(5), // Allow up to 5 tool call rounds
       async onFinish({ text }) {
-        // Update the assistant message with final content
+        // Update the assistant message with final content and tool calls
         await db.message.update({
           where: { id: assistantMessage.id },
-          data: { content: text },
+          data: {
+            content: text,
+            toolCalls:
+              collectedToolCalls.length > 0
+                ? (collectedToolCalls as unknown as Parameters<
+                    typeof db.message.update
+                  >[0]['data']['toolCalls'])
+                : undefined,
+          },
         });
 
         // Generate title if needed - await so the title is ready when client refetches
@@ -107,9 +122,39 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Return the stream with message IDs in headers
-    return result.toTextStreamResponse({
+    // Stream the response with tool call information
+    // Use fullStream which includes tool-call and tool-result events
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const part of result.fullStream) {
+            // Collect tool calls for saving to the database
+            if (part.type === 'tool-call') {
+              // The SDK uses 'args' for static tools and 'input' for dynamic tools
+              const args = 'args' in part ? part.args : 'input' in part ? part.input : {};
+              collectedToolCalls.push({
+                id: part.toolCallId,
+                name: part.toolName,
+                args: args as Record<string, unknown>,
+              });
+            }
+
+            // Send each part as a newline-delimited JSON event
+            const event = JSON.stringify(part) + '\n';
+            controller.enqueue(encoder.encode(event));
+          }
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+    });
+
+    return new Response(stream, {
       headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
         'X-User-Message-Id': userMessage.id,
         'X-Assistant-Message-Id': assistantMessage.id,
       },

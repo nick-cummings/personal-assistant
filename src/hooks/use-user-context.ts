@@ -1,7 +1,7 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { UserContext, UpdateUserContextRequest } from '@/types';
+import type { UpdateUserContextRequest, UserContext } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const CONTEXT_KEY = ['userContext'];
 

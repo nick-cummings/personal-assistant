@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, OutlookConfig, ToolSet } from '../types';
 import { OutlookClient } from './client';
 import { createOutlookTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, OutlookConfig } from '../types';
 
 export class OutlookConnector implements Connector<'outlook'> {
   type = 'outlook' as const;
@@ -37,5 +37,5 @@ export class OutlookConnector implements Connector<'outlook'> {
   }
 }
 
-export { OutlookClient, getOutlookAuthUrl, exchangeOutlookCode } from './client';
+export { exchangeOutlookCode, getOutlookAuthUrl, OutlookClient } from './client';
 export { createOutlookTools } from './tools';

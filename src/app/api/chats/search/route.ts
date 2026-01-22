@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,9 +111,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Chat search error:', error);
-    return NextResponse.json(
-      { error: 'Failed to search chats' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to search chats' }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
+import type { ConfluenceConfig, ConnectionTestResult, Connector, ToolSet } from '../types';
 import { ConfluenceClient } from './client';
 import { createConfluenceTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, ConfluenceConfig } from '../types';
 
 export class ConfluenceConnector implements Connector<'confluence'> {
   type = 'confluence' as const;

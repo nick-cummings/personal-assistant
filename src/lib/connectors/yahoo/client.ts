@@ -80,12 +80,16 @@ export class YahooImapClient {
         const recentUids = messages.slice(-maxResults).reverse();
 
         for (const uid of recentUids) {
-          const message = await client.fetchOne(String(uid), {
-            envelope: true,
-            flags: true,
-            bodyStructure: true,
-            source: true,
-          }, { uid: true });
+          const message = await client.fetchOne(
+            String(uid),
+            {
+              envelope: true,
+              flags: true,
+              bodyStructure: true,
+              source: true,
+            },
+            { uid: true }
+          );
 
           if (message && message.source) {
             const parsed = await simpleParser(message.source);
@@ -110,12 +114,16 @@ export class YahooImapClient {
       const lock = await client.getMailboxLock('INBOX');
 
       try {
-        const message = await client.fetchOne(messageId, {
-          envelope: true,
-          flags: true,
-          bodyStructure: true,
-          source: true,
-        }, { uid: true });
+        const message = await client.fetchOne(
+          messageId,
+          {
+            envelope: true,
+            flags: true,
+            bodyStructure: true,
+            source: true,
+          },
+          { uid: true }
+        );
 
         if (!message || !message.source) {
           throw new Error('Message not found');
@@ -227,10 +235,12 @@ export class YahooImapClient {
       id: uid,
       subject: envelope.subject || '(No Subject)',
       from: from ? `${from.name || ''} <${from.address || ''}>`.trim() : 'Unknown',
-      to: to.map((t: { name?: string; address?: string }) => `${t.name || ''} <${t.address || ''}>`.trim()),
+      to: to.map((t: { name?: string; address?: string }) =>
+        `${t.name || ''} <${t.address || ''}>`.trim()
+      ),
       date: envelope.date?.toISOString() || new Date().toISOString(),
       snippet: (parsed.text || '').substring(0, 200),
-      body: includeBody ? (parsed.text || parsed.html || '') : undefined,
+      body: includeBody ? parsed.text || parsed.html || '' : undefined,
       isRead: flags.has('\\Seen'),
       hasAttachments: (parsed.attachments?.length || 0) > 0,
     };

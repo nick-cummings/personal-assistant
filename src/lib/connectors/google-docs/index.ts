@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, GoogleDocsConfig, ToolSet } from '../types';
 import { GoogleDocsClient } from './client';
 import { createGoogleDocsTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GoogleDocsConfig } from '../types';
 
 export class GoogleDocsConnector implements Connector<'google-docs'> {
   type = 'google-docs' as const;
@@ -36,5 +36,5 @@ export class GoogleDocsConnector implements Connector<'google-docs'> {
   }
 }
 
-export { GoogleDocsClient, getGoogleDocsAuthUrl, exchangeGoogleDocsCode } from './client';
+export { exchangeGoogleDocsCode, getGoogleDocsAuthUrl, GoogleDocsClient } from './client';
 export { createGoogleDocsTools } from './tools';

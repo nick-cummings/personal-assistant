@@ -1,38 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
-  MessageSquare,
-  FolderPlus,
-  Settings,
-  FileText,
-  Plug,
-  Search,
-  Moon,
-  Sun,
-  PanelLeftClose,
-  PanelLeft,
-  Keyboard,
-  Plus,
-} from 'lucide-react';
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
+    CommandDialog,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    CommandSeparator,
+    CommandShortcut
 } from '@/components/ui/command';
-import { useAppStore } from '@/stores/app-store';
 import { useChats, useCreateChat } from '@/hooks/use-chats';
-import { useTheme } from 'next-themes';
+import { ALL_SHORTCUTS, formatShortcut } from '@/hooks/use-keyboard-shortcuts';
+import { useAppStore } from '@/stores/app-store';
 import {
-  ALL_SHORTCUTS,
-  formatShortcut,
-} from '@/hooks/use-keyboard-shortcuts';
+    FileText, Keyboard, MessageSquare, Moon, PanelLeft, PanelLeftClose, Plug, Plus, Search, Settings, Sun
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -130,9 +116,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               {filteredChats.slice(0, 5).map((chat) => (
                 <CommandItem
                   key={chat.id}
-                  onSelect={() =>
-                    runCommand(() => router.push(`/chat/${chat.id}`))
-                  }
+                  onSelect={() => runCommand(() => router.push(`/chat/${chat.id}`))}
                 >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   <span>{chat.title}</span>
@@ -145,31 +129,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         {/* Navigation */}
         <CommandGroup heading="Navigation">
-          <CommandItem
-            onSelect={() => runCommand(() => router.push('/chat'))}
-          >
+          <CommandItem onSelect={() => runCommand(() => router.push('/chat'))}>
             <MessageSquare className="mr-2 h-4 w-4" />
             <span>Chat</span>
           </CommandItem>
 
-          <CommandItem
-            onSelect={() => runCommand(() => router.push('/settings'))}
-          >
+          <CommandItem onSelect={() => runCommand(() => router.push('/settings'))}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
             <CommandShortcut>⌘,</CommandShortcut>
           </CommandItem>
 
-          <CommandItem
-            onSelect={() => runCommand(() => router.push('/settings/connectors'))}
-          >
+          <CommandItem onSelect={() => runCommand(() => router.push('/settings/connectors'))}>
             <Plug className="mr-2 h-4 w-4" />
             <span>Connectors</span>
           </CommandItem>
 
-          <CommandItem
-            onSelect={() => runCommand(() => router.push('/settings/context'))}
-          >
+          <CommandItem onSelect={() => runCommand(() => router.push('/settings/context'))}>
             <FileText className="mr-2 h-4 w-4" />
             <span>My Context</span>
           </CommandItem>
@@ -180,9 +156,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         {/* Theme */}
         <CommandGroup heading="Appearance">
           <CommandItem
-            onSelect={() =>
-              runCommand(() => setTheme(theme === 'dark' ? 'light' : 'dark'))
-            }
+            onSelect={() => runCommand(() => setTheme(theme === 'dark' ? 'light' : 'dark'))}
           >
             {theme === 'dark' ? (
               <Sun className="mr-2 h-4 w-4" />
@@ -203,9 +177,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 // Show keyboard shortcuts in a modal or navigate to help
                 alert(
                   'Keyboard Shortcuts:\n\n' +
-                    ALL_SHORTCUTS.map(
-                      (s) => `${formatShortcut(s)}: ${s.description}`
-                    ).join('\n')
+                    ALL_SHORTCUTS.map((s) => `${formatShortcut(s)}: ${s.description}`).join('\n')
                 );
               })
             }

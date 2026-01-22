@@ -60,7 +60,9 @@ async function main() {
     const labels = await client.listLabels();
     console.log('Found', labels.length, 'labels/folders:');
     for (const label of labels) {
-      console.log(`  - ${label.name} (${label.id}): ${label.messageCount} messages, ${label.unreadCount} unread`);
+      console.log(
+        `  - ${label.name} (${label.id}): ${label.messageCount} messages, ${label.unreadCount} unread`
+      );
     }
     console.log();
   } catch (error) {

@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { GitHubClient } from './client';
 import type { ToolSet } from '../types';
+import { GitHubClient } from './client';
 
 export function createGitHubTools(client: GitHubClient): ToolSet {
   const github_list_prs = tool({
@@ -18,10 +18,7 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
         .optional()
         .default('open')
         .describe('Filter by PR state: "open" (default), "closed", or "all"'),
-      author: z
-        .string()
-        .optional()
-        .describe('Filter by author GitHub username (e.g., "octocat")'),
+      author: z.string().optional().describe('Filter by author GitHub username (e.g., "octocat")'),
     }),
     execute: async ({ repo, state, author }) => {
       console.log('[GitHub] github_list_prs called with:', { repo, state, author });
@@ -225,9 +222,7 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
     inputSchema: z.object({
       repo: z
         .string()
-        .describe(
-          'Repository in format "owner/repo" (e.g., "facebook/react", "vercel/next.js")'
-        ),
+        .describe('Repository in format "owner/repo" (e.g., "facebook/react", "vercel/next.js")'),
       workflow: z
         .string()
         .optional()
@@ -245,7 +240,12 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
         .describe('Maximum number of runs to return (default: 10, max: 100)'),
     }),
     execute: async ({ repo, workflow, status, limit }) => {
-      console.log('[GitHub] github_list_actions_runs called with:', { repo, workflow, status, limit });
+      console.log('[GitHub] github_list_actions_runs called with:', {
+        repo,
+        workflow,
+        status,
+        limit,
+      });
 
       if (!client.hasCredentials()) {
         console.log('[GitHub] No credentials configured');
@@ -327,7 +327,11 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
         const fullRepo = repo.includes('/') ? repo : `${client.defaultOwner}/${repo}`;
         console.log('[GitHub] Fetching workflow run:', runId);
         const run = await client.getWorkflowRun(fullRepo, runId);
-        console.log('[GitHub] Got workflow run:', { id: run.id, name: run.name, conclusion: run.conclusion });
+        console.log('[GitHub] Got workflow run:', {
+          id: run.id,
+          name: run.name,
+          conclusion: run.conclusion,
+        });
 
         return {
           id: run.id,

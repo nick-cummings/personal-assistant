@@ -1,4 +1,4 @@
-import type { JiraConfig, AtlassianInstance } from '../types';
+import type { AtlassianInstance, JiraConfig } from '../types';
 
 // Single Jira instance client
 export class JiraInstanceClient {
@@ -384,7 +384,10 @@ export interface JiraSprintsResult {
 export function extractTextFromADF(adf: JiraIssueFields['description']): string {
   if (!adf || !adf.content) return '';
 
-  const extractText = (node: { type: string; content?: Array<{ type: string; text?: string }> }): string => {
+  const extractText = (node: {
+    type: string;
+    content?: Array<{ type: string; text?: string }>;
+  }): string => {
     if (node.type === 'text' && 'text' in node) {
       return (node as { text: string }).text || '';
     }

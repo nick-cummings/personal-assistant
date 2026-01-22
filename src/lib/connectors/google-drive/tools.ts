@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GoogleDriveClient } from './client';
 import type { ToolSet } from '../types';
+import type { GoogleDriveClient } from './client';
 
 export function createGoogleDriveTools(client: GoogleDriveClient): ToolSet {
   return {
@@ -51,7 +51,8 @@ export function createGoogleDriveTools(client: GoogleDriveClient): ToolSet {
     }),
 
     google_drive_get_file_content: tool({
-      description: 'Get the text content of a file in Google Drive (works with Google Docs, Sheets, text files)',
+      description:
+        'Get the text content of a file in Google Drive (works with Google Docs, Sheets, text files)',
       inputSchema: z.object({
         fileId: z.string().describe('The ID of the file to read'),
       }),
@@ -85,7 +86,9 @@ export function createGoogleDriveTools(client: GoogleDriveClient): ToolSet {
       description: 'Search for files in Google Drive by content',
       inputSchema: z.object({
         query: z.string().describe('Search query'),
-        fileType: z.enum(['document', 'spreadsheet', 'presentation', 'pdf', 'any']).optional()
+        fileType: z
+          .enum(['document', 'spreadsheet', 'presentation', 'pdf', 'any'])
+          .optional()
           .describe('Filter by file type'),
       }),
       execute: async ({ query, fileType }) => {

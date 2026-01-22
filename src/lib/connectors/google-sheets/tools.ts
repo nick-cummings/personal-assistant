@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GoogleSheetsClient } from './client';
 import type { ToolSet } from '../types';
+import type { GoogleSheetsClient } from './client';
 
 export function createGoogleSheetsTools(client: GoogleSheetsClient): ToolSet {
   return {
@@ -68,7 +68,11 @@ export function createGoogleSheetsTools(client: GoogleSheetsClient): ToolSet {
       inputSchema: z.object({
         spreadsheetId: z.string().describe('The ID of the spreadsheet'),
         sheetName: z.string().describe('The name of the sheet'),
-        maxRows: z.number().optional().default(100).describe('Maximum number of data rows to return'),
+        maxRows: z
+          .number()
+          .optional()
+          .default(100)
+          .describe('Maximum number of data rows to return'),
       }),
       execute: async ({ spreadsheetId, sheetName, maxRows }) => {
         const table = await client.getSheetAsTable(spreadsheetId, sheetName, maxRows);

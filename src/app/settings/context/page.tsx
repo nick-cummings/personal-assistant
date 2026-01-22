@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Save, RotateCcw } from 'lucide-react';
+import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { LoadingSpinner } from '@/components/shared/loading-spinner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useContext } from '@/hooks/use-context';
+import { ArrowLeft, RotateCcw, Save } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 const DEFAULT_CONTEXT = `# About Me
 
@@ -143,7 +143,7 @@ export default function ContextEditorPage() {
                 placeholder="Enter your context document in Markdown format..."
               />
               {hasChanges && (
-                <div className="absolute right-3 top-3">
+                <div className="absolute top-3 right-3">
                   <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
                     Unsaved changes
                   </span>

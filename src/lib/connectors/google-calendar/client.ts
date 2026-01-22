@@ -1,10 +1,8 @@
 import {
-  OAuthClient,
-  buildOAuthAuthUrl,
-  exchangeOAuthCode,
-  type OAuthConfig,
-  type OAuthProviderConfig,
-  type TokenResponse,
+    buildOAuthAuthUrl,
+    exchangeOAuthCode, OAuthClient, type OAuthConfig,
+    type OAuthProviderConfig,
+    type TokenResponse
 } from '../shared/oauth-client';
 
 interface Calendar {

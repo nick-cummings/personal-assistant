@@ -1,6 +1,6 @@
+import type { AWSConfig, ConnectionTestResult, Connector, ToolSet } from '../types';
 import { AWSClient } from './client';
 import { createAWSTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, AWSConfig } from '../types';
 
 export class AWSConnector implements Connector<'aws'> {
   type = 'aws' as const;

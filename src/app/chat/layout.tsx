@@ -1,6 +1,6 @@
-import { Sidebar } from '@/components/sidebar/sidebar';
-import { MobileHeader } from '@/components/sidebar/mobile-sidebar';
 import { AppShell } from '@/components/shared/app-shell';
+import { MobileHeader } from '@/components/sidebar/mobile-sidebar';
+import { Sidebar } from '@/components/sidebar/sidebar';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   return (

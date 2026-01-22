@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { JenkinsClient } from './client';
 import type { ToolSet } from '../types';
+import { JenkinsClient } from './client';
 
 export function createJenkinsTools(client: JenkinsClient): ToolSet {
   const jenkins_list_jobs = tool({
@@ -35,7 +35,9 @@ export function createJenkinsTools(client: JenkinsClient): ToolSet {
     inputSchema: z.object({
       jobName: z
         .string()
-        .describe('Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'),
+        .describe(
+          'Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'
+        ),
     }),
     execute: async ({ jobName }) => {
       const job = await client.getJobStatus(jobName);
@@ -72,11 +74,14 @@ export function createJenkinsTools(client: JenkinsClient): ToolSet {
   });
 
   const jenkins_get_build = tool({
-    description: 'Get details about a specific Jenkins build including result, duration, and changes.',
+    description:
+      'Get details about a specific Jenkins build including result, duration, and changes.',
     inputSchema: z.object({
       jobName: z
         .string()
-        .describe('Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'),
+        .describe(
+          'Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'
+        ),
       buildNumber: z
         .union([z.number(), z.literal('lastBuild')])
         .describe('Build number or "lastBuild" for the most recent build'),
@@ -124,7 +129,9 @@ export function createJenkinsTools(client: JenkinsClient): ToolSet {
     inputSchema: z.object({
       jobName: z
         .string()
-        .describe('Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'),
+        .describe(
+          'Job name, including folder path if applicable (e.g., "my-job" or "folder/my-job")'
+        ),
       buildNumber: z
         .union([z.number(), z.literal('lastBuild')])
         .describe('Build number or "lastBuild" for the most recent build'),

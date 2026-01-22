@@ -1,13 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import { FileText, Settings as SettingsIcon, Plug, Keyboard } from 'lucide-react';
 import { ConnectorHealthDashboard } from '@/components/settings/connector-health-dashboard';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
-import {
-  ALL_SHORTCUTS,
-  formatShortcut,
-} from '@/hooks/use-keyboard-shortcuts';
+import { ALL_SHORTCUTS, formatShortcut } from '@/hooks/use-keyboard-shortcuts';
+import { FileText, Keyboard, Plug, Settings as SettingsIcon } from 'lucide-react';
+import Link from 'next/link';
 
 export default function SettingsPage() {
   return (
@@ -16,9 +13,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Settings</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your AI Chat Hub preferences
-            </p>
+            <p className="text-muted-foreground text-sm">Manage your AI Chat Hub preferences</p>
           </div>
           <ThemeToggle />
         </div>
@@ -74,8 +69,8 @@ export default function SettingsPage() {
 
           {/* Keyboard Shortcuts */}
           <div className="rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Keyboard className="h-5 w-5 text-muted-foreground" />
+            <div className="mb-4 flex items-center gap-2">
+              <Keyboard className="text-muted-foreground h-5 w-5" />
               <h2 className="font-medium">Keyboard Shortcuts</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -84,10 +79,8 @@ export default function SettingsPage() {
                   key={shortcut.key + (shortcut.meta ? 'meta' : '')}
                   className="flex items-center justify-between py-1"
                 >
-                  <span className="text-muted-foreground">
-                    {shortcut.description}
-                  </span>
-                  <kbd className="px-2 py-1 text-xs bg-muted rounded font-mono">
+                  <span className="text-muted-foreground">{shortcut.description}</span>
+                  <kbd className="bg-muted rounded px-2 py-1 font-mono text-xs">
                     {formatShortcut(shortcut)}
                   </kbd>
                 </div>

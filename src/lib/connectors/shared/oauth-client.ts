@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { encryptJson, decryptJson } from '@/lib/utils/crypto';
+import { decryptJson, encryptJson } from '@/lib/utils/crypto';
 import type { ConnectorType } from '@/types';
 import type { BaseConnectorConfig } from '../types';
 
@@ -347,9 +347,7 @@ export async function exchangeOAuthCodeWithBasicAuth(
   redirectUri: string,
   tokenUrl: string
 ): Promise<TokenResponse> {
-  const credentials = Buffer.from(
-    `${config.clientId}:${config.clientSecret}`
-  ).toString('base64');
+  const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
 
   const params = new URLSearchParams({
     grant_type: 'authorization_code',

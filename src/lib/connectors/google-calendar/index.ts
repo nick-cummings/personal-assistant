@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, GoogleCalendarConfig, ToolSet } from '../types';
 import { GoogleCalendarClient } from './client';
 import { createGoogleCalendarTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GoogleCalendarConfig } from '../types';
 
 export class GoogleCalendarConnector implements Connector<'google-calendar'> {
   type = 'google-calendar' as const;
@@ -36,5 +36,7 @@ export class GoogleCalendarConnector implements Connector<'google-calendar'> {
   }
 }
 
-export { GoogleCalendarClient, getGoogleCalendarAuthUrl, exchangeGoogleCalendarCode } from './client';
+export {
+    exchangeGoogleCalendarCode, getGoogleCalendarAuthUrl, GoogleCalendarClient
+} from './client';
 export { createGoogleCalendarTools } from './tools';

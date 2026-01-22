@@ -1,31 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { PanelLeftClose, PanelLeft, Plus, FolderPlus, Settings, FileText } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { LoadingSpinner } from '@/components/shared/loading-spinner';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { SearchInput } from './search-input';
-import { FolderTree } from './folder-tree';
+import { useChats, useCreateChat } from '@/hooks/use-chats';
+import { useCreateFolder, useFolders } from '@/hooks/use-folders';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/stores/app-store';
+import { FileText, FolderPlus, PanelLeft, PanelLeftClose, Plus, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { ArchivedChats } from './archived-chats';
 import { SidebarDndProvider } from './dnd-context';
-import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { useAppStore } from '@/stores/app-store';
-import { useFolders, useCreateFolder } from '@/hooks/use-folders';
-import { useChats, useCreateChat } from '@/hooks/use-chats';
+import { FolderTree } from './folder-tree';
+import { SearchInput } from './search-input';
 
 export function Sidebar() {
   const router = useRouter();
@@ -145,8 +145,8 @@ export function Sidebar() {
             <Separator />
 
             {/* Folder/Chat Tree */}
-            <ScrollArea className="flex-1 w-full">
-              <div className="p-2 w-full">
+            <ScrollArea className="w-full flex-1">
+              <div className="w-full p-2">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingSpinner />

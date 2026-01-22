@@ -1,8 +1,6 @@
 import {
-  OAuthClient,
-  exchangeOAuthCode,
-  type OAuthProviderConfig,
-  type TokenResponse,
+    exchangeOAuthCode, OAuthClient, type OAuthProviderConfig,
+    type TokenResponse
 } from '../shared/oauth-client';
 import type { OutlookConfig } from '../types';
 
@@ -114,11 +112,7 @@ export class OutlookClient extends OAuthClient<OutlookConfig> {
     };
   }
 
-  async searchEmails(
-    query: string,
-    folder?: string,
-    limit: number = 20
-  ): Promise<GraphMessage[]> {
+  async searchEmails(query: string, folder?: string, limit: number = 20): Promise<GraphMessage[]> {
     const folderPath = folder ? `/mailFolders/${encodeURIComponent(folder)}` : '';
     const searchQuery = encodeURIComponent(query);
 

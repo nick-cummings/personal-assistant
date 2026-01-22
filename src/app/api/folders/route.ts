@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { CreateFolderRequest, FolderWithChildren } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/folders - List all folders as a tree
 export async function GET() {

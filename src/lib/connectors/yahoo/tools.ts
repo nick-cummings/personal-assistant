@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { YahooImapClient } from './client';
 import type { ToolSet } from '../types';
+import type { YahooImapClient } from './client';
 
 export function createYahooTools(client: YahooImapClient): ToolSet {
   return {
@@ -26,7 +26,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Yahoo] No credentials configured');
           return {
-            error: 'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -51,7 +52,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
           const message = error instanceof Error ? error.message : 'Unknown error';
           if (message.includes('Authentication') || message.includes('auth')) {
             return {
-              error: 'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
+              error:
+                'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
             };
           }
           return {
@@ -85,14 +87,19 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Yahoo] No credentials configured');
           return {
-            error: 'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
         try {
           console.log('[Yahoo] Calling client.getEmail...');
           const email = await client.getEmail(messageId);
-          console.log('[Yahoo] Got email:', { id: email.id, subject: email.subject, bodyLength: email.body?.length });
+          console.log('[Yahoo] Got email:', {
+            id: email.id,
+            subject: email.subject,
+            bodyLength: email.body?.length,
+          });
           return {
             id: email.id,
             subject: email.subject,
@@ -111,7 +118,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
 
           if (message.includes('Authentication') || message.includes('auth')) {
             return {
-              error: 'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
+              error:
+                'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
             };
           }
           if (message.includes('not found') || message.includes('Message not found')) {
@@ -133,7 +141,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
       execute: async () => {
         if (!client.hasCredentials()) {
           return {
-            error: 'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -152,7 +161,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
           const message = error instanceof Error ? error.message : 'Unknown error';
           if (message.includes('Authentication') || message.includes('auth')) {
             return {
-              error: 'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
+              error:
+                'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
             };
           }
           return {
@@ -180,7 +190,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
       execute: async ({ folderId, maxResults }) => {
         if (!client.hasCredentials()) {
           return {
-            error: 'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -202,7 +213,8 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
           const message = error instanceof Error ? error.message : 'Unknown error';
           if (message.includes('Authentication') || message.includes('auth')) {
             return {
-              error: 'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
+              error:
+                'Yahoo Mail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Yahoo password).',
             };
           }
           return {

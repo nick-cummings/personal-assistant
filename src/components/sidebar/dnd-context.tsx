@@ -1,24 +1,17 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
-import {
-  DndContext,
-  DragOverlay,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragEndEvent,
-  DragOverEvent,
-} from '@dnd-kit/core';
-import {
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import { MessageSquare, Folder } from 'lucide-react';
 import { useUpdateChat } from '@/hooks/use-chats';
 import { useUpdateFolder } from '@/hooks/use-folders';
+import {
+    closestCenter, DndContext, DragEndEvent,
+    DragOverEvent, DragOverlay, DragStartEvent, KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { Folder, MessageSquare } from 'lucide-react';
+import { createContext, useCallback, useContext, useState } from 'react';
 
 export type DraggableType = 'chat' | 'folder';
 
@@ -79,60 +72,64 @@ export function SidebarDndProvider({ children }: SidebarDndProviderProps) {
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { over } = event;
     if (over) {
-      const overData = over.data.current as { type?: string; accepts?: DraggableType[] } | undefined;
+      const overData = over.data.current as
+        | { type?: string; accepts?: DraggableType[] }
+        | undefined;
       setOverId(over.id as string);
-      setOverType(overData?.type === 'folder' ? 'folder' : overData?.type === 'root' ? 'root' : null);
+      setOverType(
+        overData?.type === 'folder' ? 'folder' : overData?.type === 'root' ? 'root' : null
+      );
     } else {
       setOverId(null);
       setOverType(null);
     }
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    setActiveItem(null);
-    setOverId(null);
-    setOverType(null);
+      setActiveItem(null);
+      setOverId(null);
+      setOverType(null);
 
-    if (!over) return;
+      if (!over) return;
 
-    const activeData = active.data.current as DragItem | undefined;
-    const overData = over.data.current as { type?: string; folderId?: string | null } | undefined;
+      const activeData = active.data.current as DragItem | undefined;
+      const overData = over.data.current as { type?: string; folderId?: string | null } | undefined;
 
-    if (!activeData) return;
+      if (!activeData) return;
 
-    const targetFolderId = overData?.type === 'folder'
-      ? (over.id as string)
-      : overData?.type === 'root'
-        ? null
-        : null;
+      const targetFolderId =
+        overData?.type === 'folder' ? (over.id as string) : overData?.type === 'root' ? null : null;
 
-    // Don't do anything if dropping on the same location
-    if (activeData.type === 'chat' && activeData.parentId === targetFolderId) {
-      return;
-    }
-    if (activeData.type === 'folder' && activeData.parentId === targetFolderId) {
-      return;
-    }
+      // Don't do anything if dropping on the same location
+      if (activeData.type === 'chat' && activeData.parentId === targetFolderId) {
+        return;
+      }
+      if (activeData.type === 'folder' && activeData.parentId === targetFolderId) {
+        return;
+      }
 
-    // Prevent dropping a folder into itself or its descendants
-    if (activeData.type === 'folder' && targetFolderId === activeData.id) {
-      return;
-    }
+      // Prevent dropping a folder into itself or its descendants
+      if (activeData.type === 'folder' && targetFolderId === activeData.id) {
+        return;
+      }
 
-    if (activeData.type === 'chat') {
-      updateChat.mutate({
-        id: activeData.id,
-        folderId: targetFolderId,
-      });
-    } else if (activeData.type === 'folder') {
-      updateFolder.mutate({
-        id: activeData.id,
-        parentId: targetFolderId,
-      });
-    }
-  }, [updateChat, updateFolder]);
+      if (activeData.type === 'chat') {
+        updateChat.mutate({
+          id: activeData.id,
+          folderId: targetFolderId,
+        });
+      } else if (activeData.type === 'folder') {
+        updateFolder.mutate({
+          id: activeData.id,
+          parentId: targetFolderId,
+        });
+      }
+    },
+    [updateChat, updateFolder]
+  );
 
   const handleDragCancel = useCallback(() => {
     setActiveItem(null);
@@ -155,13 +152,13 @@ export function SidebarDndProvider({ children }: SidebarDndProviderProps) {
 
       <DragOverlay dropAnimation={null}>
         {activeItem && (
-          <div className="flex items-center gap-2 rounded-md bg-accent px-2 py-1.5 text-sm shadow-lg border">
+          <div className="bg-accent flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm shadow-lg">
             {activeItem.type === 'chat' ? (
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <MessageSquare className="text-muted-foreground h-4 w-4" />
             ) : (
-              <Folder className="h-4 w-4 text-muted-foreground" />
+              <Folder className="text-muted-foreground h-4 w-4" />
             )}
-            <span className="truncate max-w-[150px]">{activeItem.title}</span>
+            <span className="max-w-[150px] truncate">{activeItem.title}</span>
           </div>
         )}
       </DragOverlay>

@@ -1,5 +1,7 @@
+import {
+    getAllConnectorMetadata, getConnectorMetadata, getEnabledConnectors
+} from '@/lib/connectors';
 import { db } from '@/lib/db';
-import { getConnectorMetadata, getAllConnectorMetadata, getEnabledConnectors } from '@/lib/connectors';
 import type { ConnectorType } from '@/types';
 
 const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
@@ -43,18 +45,20 @@ export async function buildSystemPrompt(): Promise<string> {
 
   // Add enabled connectors list with descriptions
   if (enabledConnectors.length > 0) {
-    const connectorList = enabledConnectors.map((c) => {
-      const metadata = getConnectorMetadata(c.type as ConnectorType);
-      const description = metadata?.description || '';
-      return `- **${c.name}** (${c.type})${description ? ` — ${description}` : ''}`;
-    }).join('\n');
-    parts.push(`\n## Available Connectors\n\nYou have access to ${enabledConnectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`);
+    const connectorList = enabledConnectors
+      .map((c) => {
+        const metadata = getConnectorMetadata(c.type as ConnectorType);
+        const description = metadata?.description || '';
+        return `- **${c.name}** (${c.type})${description ? ` — ${description}` : ''}`;
+      })
+      .join('\n');
+    parts.push(
+      `\n## Available Connectors\n\nYou have access to ${enabledConnectors.length} configured connector(s). Use these tools to help the user:\n\n${connectorList}`
+    );
   } else {
     // List available connector types that can be configured
     const allMetadata = getAllConnectorMetadata();
-    const availableTypes = allMetadata
-      .map((m) => `- **${m.name}** — ${m.description}`)
-      .join('\n');
+    const availableTypes = allMetadata.map((m) => `- **${m.name}** — ${m.description}`).join('\n');
     parts.push(
       `\n## Available Connectors\n\nNo connectors are currently configured. The following connectors can be set up in Settings → Connectors:\n\n${availableTypes}\n\nIMPORTANT: Only mention the connectors listed above. Do not suggest connectors that are not in this list (e.g., no GitLab, Linear, Notion, Slack, etc.).`
     );
@@ -65,11 +69,13 @@ export async function buildSystemPrompt(): Promise<string> {
   const setupInstructionsSummary = allMetadata
     .map((m) => {
       // Extract key setup info from the full instructions
-      const isOAuth = m.setupInstructions?.includes('Authorize the Connection') ||
-                      m.setupInstructions?.includes('OAuth') ||
-                      m.setupInstructions?.includes('/api/auth/');
-      const hasApiToken = m.setupInstructions?.includes('API Token') ||
-                          m.setupInstructions?.includes('Personal Access Token');
+      const isOAuth =
+        m.setupInstructions?.includes('Authorize the Connection') ||
+        m.setupInstructions?.includes('OAuth') ||
+        m.setupInstructions?.includes('/api/auth/');
+      const hasApiToken =
+        m.setupInstructions?.includes('API Token') ||
+        m.setupInstructions?.includes('Personal Access Token');
       const hasServiceAccount = m.setupInstructions?.includes('Service Account');
 
       let authMethod = '';
@@ -81,12 +87,14 @@ export async function buildSystemPrompt(): Promise<string> {
         authMethod = 'API Token/Personal Access Token';
       }
 
-      const fields = m.configFields.map(f => f.label).join(', ');
+      const fields = m.configFields.map((f) => f.label).join(', ');
       return `- **${m.name}**: ${authMethod}. Required fields: ${fields}`;
     })
     .join('\n');
 
-  parts.push(`\n## Connector Setup Reference\n\nWhen users ask about setting up connectors, use this information:\n\n${setupInstructionsSummary}\n\n**OAuth connectors** (Gmail, Yahoo Mail, Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar): Users need to create an app/register in the respective developer console, enter the Client ID and Client Secret, save, then click "Connect" to complete the OAuth authorization flow.\n\n**API Token connectors** (GitHub, Jira, Confluence, Jenkins): Users generate a token from the service's settings and enter it directly.\n\n**Service Account connectors** (Google Cloud): Users create a service account and provide the JSON key credentials.\n\n**AWS**: Uses IAM access keys (Access Key ID + Secret Access Key).`);
+  parts.push(
+    `\n## Connector Setup Reference\n\nWhen users ask about setting up connectors, use this information:\n\n${setupInstructionsSummary}\n\n**OAuth connectors** (Gmail, Yahoo Mail, Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar): Users need to create an app/register in the respective developer console, enter the Client ID and Client Secret, save, then click "Connect" to complete the OAuth authorization flow.\n\n**API Token connectors** (GitHub, Jira, Confluence, Jenkins): Users generate a token from the service's settings and enter it directly.\n\n**Service Account connectors** (Google Cloud): Users create a service account and provide the JSON key credentials.\n\n**AWS**: Uses IAM access keys (Access Key ID + Secret Access Key).`
+  );
 
   return parts.join('\n');
 }

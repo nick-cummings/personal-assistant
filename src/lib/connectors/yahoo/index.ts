@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, ToolSet } from '../types';
 import { YahooImapClient, type YahooImapConfig } from './client';
 import { createYahooTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet } from '../types';
 
 export class YahooConnector implements Connector<'yahoo'> {
   type = 'yahoo' as const;

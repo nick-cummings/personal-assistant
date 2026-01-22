@@ -64,10 +64,7 @@ export type CacheKey = (typeof CACHE_KEYS)[keyof typeof CACHE_KEYS] | string;
 /**
  * Get cached data for a connector
  */
-export async function getCachedData<T>(
-  connectorId: string,
-  cacheKey: CacheKey
-): Promise<T | null> {
+export async function getCachedData<T>(connectorId: string, cacheKey: CacheKey): Promise<T | null> {
   const cached = await db.cachedData.findUnique({
     where: {
       connectorId_cacheKey: {
@@ -84,11 +81,13 @@ export async function getCachedData<T>(
   // Check if expired
   if (new Date() > cached.expiresAt) {
     // Clean up expired entry
-    await db.cachedData.delete({
-      where: { id: cached.id },
-    }).catch(() => {
-      // Ignore deletion errors (concurrent delete)
-    });
+    await db.cachedData
+      .delete({
+        where: { id: cached.id },
+      })
+      .catch(() => {
+        // Ignore deletion errors (concurrent delete)
+      });
     return null;
   }
 
@@ -134,22 +133,21 @@ export async function setCachedData<T>(
 /**
  * Invalidate cached data for a connector
  */
-export async function invalidateCache(
-  connectorId: string,
-  cacheKey?: CacheKey
-): Promise<void> {
+export async function invalidateCache(connectorId: string, cacheKey?: CacheKey): Promise<void> {
   if (cacheKey) {
     // Invalidate specific cache key
-    await db.cachedData.delete({
-      where: {
-        connectorId_cacheKey: {
-          connectorId,
-          cacheKey,
+    await db.cachedData
+      .delete({
+        where: {
+          connectorId_cacheKey: {
+            connectorId,
+            cacheKey,
+          },
         },
-      },
-    }).catch(() => {
-      // Ignore if not found
-    });
+      })
+      .catch(() => {
+        // Ignore if not found
+      });
   } else {
     // Invalidate all cache for this connector
     await db.cachedData.deleteMany({

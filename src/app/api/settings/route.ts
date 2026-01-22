@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { UpdateSettingsRequest } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
 
 const SETTINGS_ID = 'singleton';
 

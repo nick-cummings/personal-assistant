@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { OutlookClient } from './client';
 import type { ToolSet } from '../types';
+import { OutlookClient } from './client';
 
 export function createOutlookTools(client: OutlookClient): ToolSet {
   const outlook_search_emails = tool({

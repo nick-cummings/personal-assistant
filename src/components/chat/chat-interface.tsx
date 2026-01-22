@@ -1,33 +1,38 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Pencil, GitFork, ChevronDown, Archive, ArchiveRestore, Trash2, MoreHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { MessageList } from './message-list';
-import { ChatInput } from './chat-input';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import { useChat, useUpdateChat, useForkChat, useArchiveChat, useDeleteChat } from '@/hooks/use-chats';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStream } from '@/hooks/use-chat-stream';
+import {
+    useArchiveChat, useChat, useDeleteChat, useForkChat, useUpdateChat
+} from '@/hooks/use-chats';
 import { useSettings } from '@/hooks/use-settings';
 import { ANTHROPIC_MODELS } from '@/types';
+import {
+    Archive,
+    ArchiveRestore, ChevronDown, GitFork, MoreHorizontal, Pencil, Trash2
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { ChatInput } from './chat-input';
+import { MessageList } from './message-list';
 
 interface ChatInterfaceProps {
   chatId: string;
@@ -143,7 +148,12 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
                 <h1 className="text-lg font-semibold">{chat.title}</h1>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleStartEdit}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={handleStartEdit}
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
@@ -232,7 +242,7 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
 
         {/* Error display */}
         {error && (
-          <div className="mx-4 mb-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="bg-destructive/10 text-destructive mx-4 mb-2 rounded-md p-3 text-sm">
             {error}
           </div>
         )}

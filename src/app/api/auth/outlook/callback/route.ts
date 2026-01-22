@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { decryptJson, encryptJson } from '@/lib/utils/crypto';
 import { exchangeOutlookCode } from '@/lib/connectors/outlook/client';
 import type { OutlookConfig } from '@/lib/connectors/types';
+import { db } from '@/lib/db';
+import { decryptJson, encryptJson } from '@/lib/utils/crypto';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors
     if (error) {
       return NextResponse.redirect(
-        new URL(`/settings/connectors?error=${encodeURIComponent(errorDescription || error)}`, url.origin)
+        new URL(
+          `/settings/connectors?error=${encodeURIComponent(errorDescription || error)}`,
+          url.origin
+        )
       );
     }
 

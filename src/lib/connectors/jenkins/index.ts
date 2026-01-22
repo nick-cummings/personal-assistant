@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, JenkinsConfig, ToolSet } from '../types';
 import { JenkinsClient } from './client';
 import { createJenkinsTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, JenkinsConfig } from '../types';
 
 export class JenkinsConnector implements Connector<'jenkins'> {
   type = 'jenkins' as const;

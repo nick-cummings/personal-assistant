@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { ConfluenceClient } from './client';
 import type { ToolSet } from '../types';
+import { ConfluenceClient } from './client';
 
 // Helper to get instance names for schema description
 function getInstanceDescription(client: ConfluenceClient): string {
@@ -16,10 +16,7 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
     description:
       'List available Confluence spaces that the user has access to. Returns space ID, key, name, and URL. Use the space key with confluence_search to filter searches to a specific space. When multiple Confluence instances are configured, queries all instances by default.',
     inputSchema: z.object({
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ instance }) => {
       console.log('[Confluence] confluence_list_spaces called with:', { instance });
@@ -74,7 +71,13 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
           }
         }
 
-        console.log('[Confluence] Found', allSpaces.length, 'spaces across', results.length, 'instances');
+        console.log(
+          '[Confluence] Found',
+          allSpaces.length,
+          'spaces across',
+          results.length,
+          'instances'
+        );
 
         return {
           instancesQueried: results.map((r) => r.instance),
@@ -117,13 +120,15 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .optional()
         .default(10)
         .describe('Maximum number of results to return per instance (default: 10)'),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ query, spaceKey, limit, instance }) => {
-      console.log('[Confluence] confluence_search called with:', { query, spaceKey, limit, instance });
+      console.log('[Confluence] confluence_search called with:', {
+        query,
+        spaceKey,
+        limit,
+        instance,
+      });
 
       if (!client.hasCredentials()) {
         console.log('[Confluence] No credentials configured');
@@ -177,7 +182,13 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
           }
         }
 
-        console.log('[Confluence] Search returned', allPages.length, 'results across', results.length, 'instances');
+        console.log(
+          '[Confluence] Search returned',
+          allPages.length,
+          'results across',
+          results.length,
+          'instances'
+        );
 
         return {
           instancesQueried: results.map((r) => r.instance),
@@ -209,10 +220,7 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .describe(
           'The numeric ID of the page to retrieve, as returned by confluence_search (e.g., "123456789")'
         ),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ pageId, instance }) => {
       console.log('[Confluence] confluence_get_page called with:', { pageId, instance });
@@ -227,21 +235,18 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
 
       try {
         console.log('[Confluence] Querying instances for page...');
-        const results = await client.queryAllInstances(
-          async (instanceClient) => {
-            try {
-              return await instanceClient.getPage(pageId);
-            } catch (e) {
-              // Page not found in this instance - return null
-              const msg = e instanceof Error ? e.message : '';
-              if (msg.includes('404') || msg.includes('Not Found')) {
-                return null;
-              }
-              throw e;
+        const results = await client.queryAllInstances(async (instanceClient) => {
+          try {
+            return await instanceClient.getPage(pageId);
+          } catch (e) {
+            // Page not found in this instance - return null
+            const msg = e instanceof Error ? e.message : '';
+            if (msg.includes('404') || msg.includes('Not Found')) {
+              return null;
             }
-          },
-          instance
-        );
+            throw e;
+          }
+        }, instance);
 
         // Find the first instance that has this page
         const found = results.find((r) => r.result !== null);
@@ -275,7 +280,9 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
           lastModified: page.version.createdAt,
           content: page.bodyContent,
           url: `https://${found.host}/wiki${page._links.webui}`,
-          editUrl: page._links.editui ? `https://${found.host}/wiki${page._links.editui}` : undefined,
+          editUrl: page._links.editui
+            ? `https://${found.host}/wiki${page._links.editui}`
+            : undefined,
         };
       } catch (error) {
         console.error('[Confluence] Get page error:', error);
@@ -305,10 +312,7 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
       pageId: z
         .string()
         .describe('The numeric ID of the parent page whose children you want to list'),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ pageId, instance }) => {
       console.log('[Confluence] confluence_get_page_children called with:', { pageId, instance });
@@ -323,21 +327,18 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
 
       try {
         console.log('[Confluence] Querying instances for page children...');
-        const results = await client.queryAllInstances(
-          async (instanceClient) => {
-            try {
-              return await instanceClient.getPageChildren(pageId);
-            } catch (e) {
-              // Page not found in this instance - return null
-              const msg = e instanceof Error ? e.message : '';
-              if (msg.includes('404') || msg.includes('Not Found')) {
-                return null;
-              }
-              throw e;
+        const results = await client.queryAllInstances(async (instanceClient) => {
+          try {
+            return await instanceClient.getPageChildren(pageId);
+          } catch (e) {
+            // Page not found in this instance - return null
+            const msg = e instanceof Error ? e.message : '';
+            if (msg.includes('404') || msg.includes('Not Found')) {
+              return null;
             }
-          },
-          instance
-        );
+            throw e;
+          }
+        }, instance);
 
         // Find the first instance that has this page
         const found = results.find((r) => r.result !== null);
@@ -354,7 +355,12 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         }
 
         const children = found.result;
-        console.log('[Confluence] Found', children.length, 'child pages from instance:', found.instance);
+        console.log(
+          '[Confluence] Found',
+          children.length,
+          'child pages from instance:',
+          found.instance
+        );
 
         return {
           instance: found.instance,
@@ -404,13 +410,14 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .optional()
         .default(20)
         .describe('Maximum number of results to return per instance (default: 20)'),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ spaceKey, limit, instance }) => {
-      console.log('[Confluence] confluence_list_drafts called with:', { spaceKey, limit, instance });
+      console.log('[Confluence] confluence_list_drafts called with:', {
+        spaceKey,
+        limit,
+        instance,
+      });
 
       if (!client.hasCredentials()) {
         console.log('[Confluence] No credentials configured');
@@ -464,7 +471,13 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
           }
         }
 
-        console.log('[Confluence] Found', allDrafts.length, 'draft pages across', results.length, 'instances');
+        console.log(
+          '[Confluence] Found',
+          allDrafts.length,
+          'draft pages across',
+          results.length,
+          'instances'
+        );
 
         return {
           instancesQueried: results.map((r) => r.instance),
@@ -522,9 +535,7 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .describe(
           'The ID of the space where the page should be created. Use confluence_list_spaces to find available space IDs.'
         ),
-      title: z
-        .string()
-        .describe('The title of the new page'),
+      title: z.string().describe('The title of the new page'),
       content: z
         .string()
         .optional()
@@ -537,10 +548,7 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .describe(
           'Optional: The ID of the parent page if this should be a child page. Use confluence_search or confluence_get_page_children to find parent page IDs.'
         ),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ spaceId, title, content, parentId, instance }) => {
       console.log('[Confluence] confluence_create_draft called with:', {

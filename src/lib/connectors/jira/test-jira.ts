@@ -53,9 +53,7 @@ function getInstances(): AtlassianInstance[] {
     extractHost(process.env.CONFLUENCE_BASE_URL);
 
   const email =
-    process.env.ATLASSIAN_EMAIL ||
-    process.env.JIRA_EMAIL ||
-    process.env.CONFLUENCE_EMAIL;
+    process.env.ATLASSIAN_EMAIL || process.env.JIRA_EMAIL || process.env.CONFLUENCE_EMAIL;
 
   const apiToken =
     process.env.ATLASSIAN_API_TOKEN ||
@@ -185,18 +183,17 @@ async function main() {
 
   // Test 6: Get specific issue from a specific instance
   if (firstIssue) {
-    console.log(`--- Test 6: getIssue("${firstIssue.key}") from instance "${firstIssue.instance}" ---`);
+    console.log(
+      `--- Test 6: getIssue("${firstIssue.key}") from instance "${firstIssue.instance}" ---`
+    );
     try {
-      const results = await client.queryAllInstances(
-        async (instClient) => {
-          try {
-            return await instClient.getIssue(firstIssue!.key);
-          } catch {
-            return null;
-          }
-        },
-        firstIssue.instance
-      );
+      const results = await client.queryAllInstances(async (instClient) => {
+        try {
+          return await instClient.getIssue(firstIssue!.key);
+        } catch {
+          return null;
+        }
+      }, firstIssue.instance);
       const found = results.find((r) => r.result !== null);
       if (found && found.result) {
         const issue = found.result;
@@ -243,7 +240,9 @@ async function main() {
 
   // Test 8: Get active sprint from specific instance (board IDs are instance-specific)
   if (scrumBoard) {
-    console.log(`--- Test 8: getActiveSprint(${scrumBoard.id}) from instance "${scrumBoard.instance}" ---`);
+    console.log(
+      `--- Test 8: getActiveSprint(${scrumBoard.id}) from instance "${scrumBoard.instance}" ---`
+    );
     try {
       const results = await client.queryAllInstances(
         (instClient) => instClient.getActiveSprint(scrumBoard!.id),

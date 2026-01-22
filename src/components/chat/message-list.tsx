@@ -1,16 +1,19 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { ToolCallInfo } from '@/hooks/use-chat-stream';
+import type { Message } from '@/types';
+import { useEffect, useRef } from 'react';
 import { MessageBubble } from './message-bubble';
 import { StreamingMessage } from './streaming-message';
-import type { Message } from '@/types';
 
 interface StreamingMessageData {
   id: string;
   role: 'assistant';
   content: string;
   createdAt: Date;
+  toolCalls?: ToolCallInfo[];
+  isToolRunning?: boolean;
 }
 
 interface MessageListProps {
@@ -26,7 +29,7 @@ export function MessageList({ messages, streamingMessage }: MessageListProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, streamingMessage?.content]);
+  }, [messages.length, streamingMessage?.content, streamingMessage?.toolCalls?.length]);
 
   if (messages.length === 0 && !streamingMessage) {
     return (
@@ -40,12 +43,18 @@ export function MessageList({ messages, streamingMessage }: MessageListProps) {
   }
 
   return (
-    <ScrollArea className="flex-1 min-h-0 px-4">
+    <ScrollArea className="min-h-0 flex-1 px-4">
       <div className="mx-auto max-w-3xl py-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
-        {streamingMessage && <StreamingMessage content={streamingMessage.content} />}
+        {streamingMessage && (
+          <StreamingMessage
+            content={streamingMessage.content}
+            toolCalls={streamingMessage.toolCalls}
+            isToolRunning={streamingMessage.isToolRunning}
+          />
+        )}
         <div ref={scrollRef} />
       </div>
     </ScrollArea>

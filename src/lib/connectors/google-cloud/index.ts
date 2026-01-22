@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, GoogleCloudConfig, ToolSet } from '../types';
 import { GoogleCloudClient } from './client';
 import { createGoogleCloudTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GoogleCloudConfig } from '../types';
 
 export class GoogleCloudConnector implements Connector<'google-cloud'> {
   type = 'google-cloud' as const;

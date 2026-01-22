@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { GmailImapClient } from './client';
 import type { ToolSet } from '../types';
+import type { GmailImapClient } from './client';
 
 export function createGmailTools(client: GmailImapClient): ToolSet {
   return {
@@ -26,7 +26,8 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Gmail] No credentials configured');
           return {
-            error: 'Gmail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Gmail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -50,9 +51,14 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         } catch (error) {
           console.error('[Gmail] Search error:', error);
           const message = error instanceof Error ? error.message : 'Unknown error';
-          if (message.includes('Authentication') || message.includes('auth') || message.includes('Invalid credentials')) {
+          if (
+            message.includes('Authentication') ||
+            message.includes('auth') ||
+            message.includes('Invalid credentials')
+          ) {
             return {
-              error: 'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
+              error:
+                'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
             };
           }
           return {
@@ -86,14 +92,19 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Gmail] No credentials configured');
           return {
-            error: 'Gmail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Gmail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
         try {
           console.log('[Gmail] Calling client.getEmail...');
           const email = await client.getEmail(messageId);
-          console.log('[Gmail] Got email:', { id: email.id, subject: email.subject, bodyLength: email.body?.length });
+          console.log('[Gmail] Got email:', {
+            id: email.id,
+            subject: email.subject,
+            bodyLength: email.body?.length,
+          });
           return {
             id: email.id,
             subject: email.subject,
@@ -111,9 +122,14 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
           const stack = error instanceof Error ? error.stack : '';
           console.error('[Gmail] Error details:', { message, stack });
 
-          if (message.includes('Authentication') || message.includes('auth') || message.includes('Invalid credentials')) {
+          if (
+            message.includes('Authentication') ||
+            message.includes('auth') ||
+            message.includes('Invalid credentials')
+          ) {
             return {
-              error: 'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
+              error:
+                'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
             };
           }
           if (message.includes('not found') || message.includes('Message not found')) {
@@ -138,7 +154,8 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Gmail] No credentials configured');
           return {
-            error: 'Gmail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Gmail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -158,9 +175,14 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         } catch (error) {
           console.error('[Gmail] List labels error:', error);
           const message = error instanceof Error ? error.message : 'Unknown error';
-          if (message.includes('Authentication') || message.includes('auth') || message.includes('Invalid credentials')) {
+          if (
+            message.includes('Authentication') ||
+            message.includes('auth') ||
+            message.includes('Invalid credentials')
+          ) {
             return {
-              error: 'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
+              error:
+                'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
             };
           }
           return {
@@ -191,7 +213,8 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         if (!client.hasCredentials()) {
           console.log('[Gmail] No credentials configured');
           return {
-            error: 'Gmail not configured. Please add your email and app password in Settings → Connectors.',
+            error:
+              'Gmail not configured. Please add your email and app password in Settings → Connectors.',
           };
         }
 
@@ -215,9 +238,14 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         } catch (error) {
           console.error('[Gmail] Get folder emails error:', error);
           const message = error instanceof Error ? error.message : 'Unknown error';
-          if (message.includes('Authentication') || message.includes('auth') || message.includes('Invalid credentials')) {
+          if (
+            message.includes('Authentication') ||
+            message.includes('auth') ||
+            message.includes('Invalid credentials')
+          ) {
             return {
-              error: 'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
+              error:
+                'Gmail authentication failed. Please check your app password in Settings → Connectors. Make sure you are using an App Password (not your regular Google password).',
             };
           }
           return {

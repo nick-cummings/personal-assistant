@@ -1,5 +1,5 @@
+import { getCacheStatus, preloadAllConnectorCaches } from '@/lib/cache';
 import { NextResponse } from 'next/server';
-import { preloadAllConnectorCaches, getCacheStatus } from '@/lib/cache';
 
 /**
  * GET /api/cache/preload - Get cache preload status
@@ -10,10 +10,7 @@ export async function GET() {
     return NextResponse.json(status);
   } catch (error) {
     console.error('Failed to get cache status:', error);
-    return NextResponse.json(
-      { error: 'Failed to get cache status' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to get cache status' }, { status: 500 });
   }
 }
 
@@ -35,9 +32,6 @@ export async function POST() {
     return NextResponse.json(summary);
   } catch (error) {
     console.error('Failed to preload cache:', error);
-    return NextResponse.json(
-      { error: 'Failed to preload cache' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to preload cache' }, { status: 500 });
   }
 }

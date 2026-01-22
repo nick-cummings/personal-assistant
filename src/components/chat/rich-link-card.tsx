@@ -1,13 +1,31 @@
 'use client';
 
-import { ExternalLink, GitPullRequest, CircleDot, FileText, Cloud, Mail, Calendar, HardDrive, Table, Server } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    Calendar, CircleDot, Cloud, ExternalLink, FileText, GitPullRequest, HardDrive, Mail, Server, Table
+} from 'lucide-react';
 
 interface RichLinkCardProps {
   url: string;
   title: string;
   description?: string;
-  type: 'github-pr' | 'github-issue' | 'jira' | 'confluence' | 'jenkins' | 'aws' | 'outlook-email' | 'outlook-event' | 'gmail' | 'yahoo' | 'google-drive' | 'google-docs' | 'google-sheets' | 'google-calendar' | 'google-cloud' | 'generic';
+  type:
+    | 'github-pr'
+    | 'github-issue'
+    | 'jira'
+    | 'confluence'
+    | 'jenkins'
+    | 'aws'
+    | 'outlook-email'
+    | 'outlook-event'
+    | 'gmail'
+    | 'yahoo'
+    | 'google-drive'
+    | 'google-docs'
+    | 'google-sheets'
+    | 'google-calendar'
+    | 'google-cloud'
+    | 'generic';
   metadata?: {
     status?: string;
     author?: string;
@@ -163,7 +181,7 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'my-2 flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50',
+        'hover:bg-accent/50 my-2 flex items-start gap-3 rounded-lg border p-3 transition-colors',
         config.borderColor,
         config.bgColor
       )}
@@ -171,7 +189,7 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
       <span className={cn('mt-0.5 flex-shrink-0', config.color)}>
         <Icon className="h-5 w-5" />
       </span>
-      <span className="min-w-0 flex-1 flex flex-col">
+      <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-center gap-2">
           <span className={cn('text-xs font-medium', config.color)}>{config.label}</span>
           {metadata?.number && (
@@ -205,9 +223,7 @@ export function RichLinkCard({ url, title, description, type, metadata }: RichLi
 }
 
 // Helper function to detect link type from URL
-export function detectLinkType(
-  url: string
-): RichLinkCardProps['type'] {
+export function detectLinkType(url: string): RichLinkCardProps['type'] {
   if (url.includes('github.com')) {
     if (url.includes('/pull/')) return 'github-pr';
     if (url.includes('/issues/')) return 'github-issue';

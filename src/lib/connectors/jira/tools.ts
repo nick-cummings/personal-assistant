@@ -1,7 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { JiraClient, JiraInstanceClient, extractTextFromADF, type JiraSearchResult } from './client';
 import type { ToolSet } from '../types';
+import {
+    extractTextFromADF, JiraClient
+} from './client';
 
 // Helper to get instance names for schema description
 function getInstanceDescription(client: JiraClient): string {
@@ -26,10 +28,7 @@ export function createJiraTools(client: JiraClient): ToolSet {
         .optional()
         .default(20)
         .describe('Maximum number of results to return per instance (default: 20)'),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ jql, limit, instance }) => {
       console.log('[Jira] jira_search_issues called with:', { jql, limit, instance });
@@ -98,7 +97,13 @@ export function createJiraTools(client: JiraClient): ToolSet {
           }
         }
 
-        console.log('[Jira] Search returned', allIssues.length, 'issues across', results.length, 'instances');
+        console.log(
+          '[Jira] Search returned',
+          allIssues.length,
+          'issues across',
+          results.length,
+          'instances'
+        );
 
         return {
           instancesQueried: results.map((r) => r.instance),
@@ -135,10 +140,7 @@ export function createJiraTools(client: JiraClient): ToolSet {
         .describe(
           'The issue key in the format "PROJECT-NUMBER" (e.g., "PROJ-123", "DEV-456", "BUG-789"). Get this from jira_search_issues results.'
         ),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ issueKey, instance }) => {
       console.log('[Jira] jira_get_issue called with:', { issueKey, instance });
@@ -161,21 +163,18 @@ export function createJiraTools(client: JiraClient): ToolSet {
 
       try {
         console.log('[Jira] Querying instances for issue...');
-        const results = await client.queryAllInstances(
-          async (instanceClient) => {
-            try {
-              return await instanceClient.getIssue(issueKey);
-            } catch (e) {
-              // Issue not found in this instance - return null
-              const msg = e instanceof Error ? e.message : '';
-              if (msg.includes('404') || msg.includes('does not exist')) {
-                return null;
-              }
-              throw e; // Re-throw other errors
+        const results = await client.queryAllInstances(async (instanceClient) => {
+          try {
+            return await instanceClient.getIssue(issueKey);
+          } catch (e) {
+            // Issue not found in this instance - return null
+            const msg = e instanceof Error ? e.message : '';
+            if (msg.includes('404') || msg.includes('does not exist')) {
+              return null;
             }
-          },
-          instance
-        );
+            throw e; // Re-throw other errors
+          }
+        }, instance);
 
         // Find the first instance that has this issue
         const found = results.find((r) => r.result !== null);
@@ -248,10 +247,7 @@ export function createJiraTools(client: JiraClient): ToolSet {
         .describe(
           'The issue key in the format "PROJECT-NUMBER" (e.g., "PROJ-123"). Get this from jira_search_issues results.'
         ),
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ issueKey, instance }) => {
       console.log('[Jira] jira_get_issue_comments called with:', { issueKey, instance });
@@ -274,21 +270,18 @@ export function createJiraTools(client: JiraClient): ToolSet {
 
       try {
         console.log('[Jira] Querying instances for issue comments...');
-        const results = await client.queryAllInstances(
-          async (instanceClient) => {
-            try {
-              return await instanceClient.getIssueComments(issueKey);
-            } catch (e) {
-              // Issue not found in this instance - return null
-              const msg = e instanceof Error ? e.message : '';
-              if (msg.includes('404') || msg.includes('does not exist')) {
-                return null;
-              }
-              throw e;
+        const results = await client.queryAllInstances(async (instanceClient) => {
+          try {
+            return await instanceClient.getIssueComments(issueKey);
+          } catch (e) {
+            // Issue not found in this instance - return null
+            const msg = e instanceof Error ? e.message : '';
+            if (msg.includes('404') || msg.includes('does not exist')) {
+              return null;
             }
-          },
-          instance
-        );
+            throw e;
+          }
+        }, instance);
 
         // Find the first instance that has this issue
         const found = results.find((r) => r.result !== null);
@@ -343,10 +336,7 @@ export function createJiraTools(client: JiraClient): ToolSet {
     description:
       'List all available Jira boards (Scrum and Kanban boards). Returns board IDs, names, types, and associated projects. Use the board ID with jira_get_sprint to get active sprint information. When multiple Jira instances are configured, queries all instances by default.',
     inputSchema: z.object({
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ instance }) => {
       console.log('[Jira] jira_list_boards called with:', { instance });
@@ -434,7 +424,10 @@ export function createJiraTools(client: JiraClient): ToolSet {
       instance: z
         .string()
         .optional()
-        .describe(getInstanceDescription(client) + ' IMPORTANT: Board IDs are instance-specific, so specify the instance from jira_list_boards results.'),
+        .describe(
+          getInstanceDescription(client) +
+            ' IMPORTANT: Board IDs are instance-specific, so specify the instance from jira_list_boards results.'
+        ),
     }),
     execute: async ({ boardId, instance }) => {
       console.log('[Jira] jira_get_sprint called with:', { boardId, instance });
@@ -476,7 +469,8 @@ export function createJiraTools(client: JiraClient): ToolSet {
         if (!found || !found.result) {
           console.log('[Jira] No active sprint found');
           return {
-            message: 'No active sprint found for this board. The board may be a Kanban board (which has no sprints) or all sprints may be closed.',
+            message:
+              'No active sprint found for this board. The board may be a Kanban board (which has no sprints) or all sprints may be closed.',
           };
         }
 
@@ -484,7 +478,10 @@ export function createJiraTools(client: JiraClient): ToolSet {
         console.log('[Jira] Active sprint:', activeSprint.name, 'from instance:', found.instance);
 
         // Group issues by status category
-        const issuesByStatus: Record<string, Array<{ key: string; summary: string; assignee?: string; url: string }>> = {};
+        const issuesByStatus: Record<
+          string,
+          Array<{ key: string; summary: string; assignee?: string; url: string }>
+        > = {};
         for (const issue of issues.issues) {
           const category = issue.fields.status.statusCategory.name;
           if (!issuesByStatus[category]) {
@@ -537,10 +534,7 @@ export function createJiraTools(client: JiraClient): ToolSet {
     description:
       'List all Jira projects the user has access to. Returns project keys (used in JQL queries and issue keys), names, and types. Use project keys with jira_search_issues to filter by project. When multiple Jira instances are configured, queries all instances by default.',
     inputSchema: z.object({
-      instance: z
-        .string()
-        .optional()
-        .describe(getInstanceDescription(client)),
+      instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
     execute: async ({ instance }) => {
       console.log('[Jira] jira_list_projects called with:', { instance });
@@ -593,7 +587,13 @@ export function createJiraTools(client: JiraClient): ToolSet {
           }
         }
 
-        console.log('[Jira] Found', allProjects.length, 'projects across', results.length, 'instances');
+        console.log(
+          '[Jira] Found',
+          allProjects.length,
+          'projects across',
+          results.length,
+          'instances'
+        );
 
         return {
           instancesQueried: results.map((r) => r.instance),

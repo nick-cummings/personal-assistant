@@ -1,6 +1,6 @@
+import type { ConnectionTestResult, Connector, GoogleSheetsConfig, ToolSet } from '../types';
 import { GoogleSheetsClient } from './client';
 import { createGoogleSheetsTools } from './tools';
-import type { Connector, ConnectionTestResult, ToolSet, GoogleSheetsConfig } from '../types';
 
 export class GoogleSheetsConnector implements Connector<'google-sheets'> {
   type = 'google-sheets' as const;
@@ -36,5 +36,5 @@ export class GoogleSheetsConnector implements Connector<'google-sheets'> {
   }
 }
 
-export { GoogleSheetsClient, getGoogleSheetsAuthUrl, exchangeGoogleSheetsCode } from './client';
+export { exchangeGoogleSheetsCode, getGoogleSheetsAuthUrl, GoogleSheetsClient } from './client';
 export { createGoogleSheetsTools } from './tools';

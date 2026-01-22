@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { decryptJson, encryptJson } from '@/lib/utils/crypto';
-import {
-  exchangeOAuthCode,
-  exchangeOAuthCodeWithBasicAuth,
-  type OAuthConfig,
-  type TokenResponse,
-} from './oauth-client';
 import type { ConnectorType } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
+import {
+    exchangeOAuthCode,
+    exchangeOAuthCodeWithBasicAuth,
+    type OAuthConfig,
+    type TokenResponse
+} from './oauth-client';
 
 /**
  * Configuration for OAuth callback handling
@@ -174,7 +174,8 @@ export async function handleOAuthInit(
   } catch (error) {
     console.error(`${config.displayName} auth error:`, error);
     const url = new URL(request.url);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate authentication';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to initiate authentication';
     return NextResponse.redirect(
       new URL(`/settings/connectors?error=${encodeURIComponent(errorMessage)}`, url.origin)
     );
@@ -213,7 +214,8 @@ export async function handleOAuthInitExtended<TConfig>(
   } catch (error) {
     console.error(`${config.displayName} auth error:`, error);
     const url = new URL(request.url);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate authentication';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to initiate authentication';
     return NextResponse.redirect(
       new URL(`/settings/connectors?error=${encodeURIComponent(errorMessage)}`, url.origin)
     );

@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ChatWithMessages } from '@/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
 
 interface UseChatStreamOptions {
   chatId: string;
   onFinish?: () => void;
+}
+
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  state: 'pending' | 'result';
 }
 
 interface StreamingMessage {
@@ -14,6 +21,8 @@ interface StreamingMessage {
   role: 'assistant';
   content: string;
   createdAt: Date;
+  toolCalls: ToolCallInfo[];
+  isToolRunning: boolean;
 }
 
 export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
@@ -51,6 +60,8 @@ export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
         role: 'assistant',
         content: '',
         createdAt: new Date(),
+        toolCalls: [],
+        isToolRunning: false,
       });
 
       try {
@@ -72,15 +83,113 @@ export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
 
         const decoder = new TextDecoder();
         let accumulatedContent = '';
+        let toolCalls: ToolCallInfo[] = [];
+        let buffer = '';
 
-        // toTextStreamResponse returns plain text chunks
+        // Parse newline-delimited JSON events from fullStream
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          accumulatedContent += chunk;
-          setStreamingMessage((prev) => (prev ? { ...prev, content: accumulatedContent } : null));
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+
+            try {
+              const part = JSON.parse(line);
+
+              switch (part.type) {
+                case 'text-delta':
+                  accumulatedContent += part.text;
+                  setStreamingMessage((prev) =>
+                    prev ? { ...prev, content: accumulatedContent, isToolRunning: false } : null
+                  );
+                  break;
+
+                case 'tool-input-start':
+                  // Tool is starting to be called
+                  toolCalls = [
+                    ...toolCalls.filter((t) => t.id !== part.id),
+                    {
+                      id: part.id,
+                      name: part.toolName,
+                      args: {},
+                      state: 'pending' as const,
+                    },
+                  ];
+                  setStreamingMessage((prev) =>
+                    prev ? { ...prev, toolCalls, isToolRunning: true } : null
+                  );
+                  break;
+
+                case 'tool-call':
+                  // Tool call with full args (update existing or add)
+                  const existingIdx = toolCalls.findIndex((t) => t.id === part.toolCallId);
+                  if (existingIdx >= 0) {
+                    toolCalls = toolCalls.map((t) =>
+                      t.id === part.toolCallId ? { ...t, args: part.args } : t
+                    );
+                  } else {
+                    toolCalls = [
+                      ...toolCalls,
+                      {
+                        id: part.toolCallId,
+                        name: part.toolName,
+                        args: part.args || {},
+                        state: 'pending' as const,
+                      },
+                    ];
+                  }
+                  setStreamingMessage((prev) =>
+                    prev ? { ...prev, toolCalls, isToolRunning: true } : null
+                  );
+                  break;
+
+                case 'tool-result':
+                  // Tool finished with result
+                  toolCalls = toolCalls.map((t) =>
+                    t.id === part.toolCallId ? { ...t, state: 'result' as const } : t
+                  );
+                  setStreamingMessage((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          toolCalls,
+                          isToolRunning: toolCalls.some((t) => t.state === 'pending'),
+                        }
+                      : null
+                  );
+                  break;
+
+                case 'tool-error':
+                  // Tool failed
+                  toolCalls = toolCalls.map((t) =>
+                    t.id === part.toolCallId ? { ...t, state: 'result' as const } : t
+                  );
+                  setStreamingMessage((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          toolCalls,
+                          isToolRunning: toolCalls.some((t) => t.state === 'pending'),
+                        }
+                      : null
+                  );
+                  break;
+
+                case 'error':
+                  throw new Error(part.error || 'Stream error');
+
+                // Ignore other event types (start-step, finish-step, etc.)
+              }
+            } catch (parseError) {
+              // Ignore parse errors for incomplete or unknown events
+              console.debug('Parse error for stream event:', parseError);
+            }
+          }
         }
 
         // Invalidate the chat query to refresh with saved messages

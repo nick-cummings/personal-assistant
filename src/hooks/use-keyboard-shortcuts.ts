@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/stores/app-store';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect } from 'react';
 
 export interface KeyboardShortcut {
   key: string;
@@ -116,9 +116,7 @@ export function useAppKeyboardShortcuts(onCommandPalette?: () => void) {
       meta: true,
       description: 'Focus search',
       action: () => {
-        const searchInput = document.querySelector(
-          '[data-search-input]'
-        ) as HTMLInputElement;
+        const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement;
         searchInput?.focus();
       },
     },

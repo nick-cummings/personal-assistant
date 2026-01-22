@@ -33,7 +33,10 @@ type ContentBlock = ToolUseBlock | TextBlock;
 
 // Manually define tool schemas for Anthropic API
 // This is simpler and more reliable than trying to extract from Zod
-const GMAIL_TOOL_SCHEMAS: Record<string, { description: string; properties: Record<string, unknown>; required: string[] }> = {
+const GMAIL_TOOL_SCHEMAS: Record<
+  string,
+  { description: string; properties: Record<string, unknown>; required: string[] }
+> = {
   gmail_search_emails: {
     description:
       'Search for emails in Gmail. Returns a list of emails with their numeric IDs, subjects, senders, dates, and snippets. Use the returned numeric ID (e.g., "46161") with gmail_get_email to retrieve the full email body.',
@@ -135,7 +138,9 @@ async function runTest(
       iterations++;
 
       // Find all tool use blocks
-      const toolUseBlocks = response.content.filter((block): block is ToolUseBlock => block.type === 'tool_use');
+      const toolUseBlocks = response.content.filter(
+        (block): block is ToolUseBlock => block.type === 'tool_use'
+      );
 
       // Process each tool call
       const toolResults: Anthropic.MessageParam['content'] = [];
@@ -148,7 +153,9 @@ async function runTest(
         // Execute the actual tool
         const tool = tools[toolUse.name as keyof typeof tools];
         if (tool) {
-          const execute = (tool as { execute: (input: Record<string, unknown>) => Promise<unknown> }).execute;
+          const execute = (
+            tool as { execute: (input: Record<string, unknown>) => Promise<unknown> }
+          ).execute;
           const result = await execute(toolUse.input);
           console.log(
             `  Result preview: ${JSON.stringify(result).substring(0, 200)}${JSON.stringify(result).length > 200 ? '...' : ''}`
@@ -181,7 +188,9 @@ async function runTest(
     const allExpectedCalled = expectedToolCalls.every((expected) => toolCalls.includes(expected));
 
     // Get final text response
-    const textBlocks = response.content.filter((block): block is TextBlock => block.type === 'text');
+    const textBlocks = response.content.filter(
+      (block): block is TextBlock => block.type === 'text'
+    );
     const finalResponse = textBlocks.map((b) => b.text).join('\n');
     console.log(`  Final response preview: ${finalResponse.substring(0, 150)}...`);
 
@@ -189,8 +198,13 @@ async function runTest(
       console.log(`  PASSED - Called expected tools: ${toolCalls.join(', ')}`);
       return { passed: true, details: `Called: ${toolCalls.join(', ')}` };
     } else {
-      console.log(`  FAILED - Expected: ${expectedToolCalls.join(', ')}, Got: ${toolCalls.join(', ')}`);
-      return { passed: false, details: `Expected: ${expectedToolCalls.join(', ')}, Got: ${toolCalls.join(', ')}` };
+      console.log(
+        `  FAILED - Expected: ${expectedToolCalls.join(', ')}, Got: ${toolCalls.join(', ')}`
+      );
+      return {
+        passed: false,
+        details: `Expected: ${expectedToolCalls.join(', ')}, Got: ${toolCalls.join(', ')}`,
+      };
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -251,7 +265,14 @@ async function main() {
   const results: { name: string; passed: boolean; details: string }[] = [];
 
   for (const test of tests) {
-    const result = await runTest(test.name, test.prompt, test.expectedTools, anthropic, tools, anthropicTools);
+    const result = await runTest(
+      test.name,
+      test.prompt,
+      test.expectedTools,
+      anthropic,
+      tools,
+      anthropicTools
+    );
     results.push({ name: test.name, ...result });
 
     // Small delay between tests to avoid rate limiting

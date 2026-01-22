@@ -50,7 +50,9 @@ async function main() {
     console.log();
   } catch (error) {
     console.error('Connection failed:', error);
-    console.log('Note: This might fail if you have no CodePipeline access, continuing with other tests...\n');
+    console.log(
+      'Note: This might fail if you have no CodePipeline access, continuing with other tests...\n'
+    );
   }
 
   // Test 3: List log groups
@@ -61,7 +63,9 @@ async function main() {
     console.log('Found', logGroups.length, 'log groups:');
     for (const lg of logGroups.slice(0, 5)) {
       console.log(`  - ${lg.logGroupName}`);
-      console.log(`    Stored: ${lg.storedBytes || 0} bytes, Retention: ${lg.retentionInDays || 'Never expire'} days`);
+      console.log(
+        `    Stored: ${lg.storedBytes || 0} bytes, Retention: ${lg.retentionInDays || 'Never expire'} days`
+      );
       if (!firstLogGroup) {
         firstLogGroup = lg.logGroupName!;
       }
@@ -287,7 +291,10 @@ async function main() {
       console.log('  Status:', table.TableStatus);
       console.log('  Item count:', table.ItemCount);
       console.log('  Size:', table.TableSizeBytes, 'bytes');
-      console.log('  Key schema:', table.KeySchema?.map((k) => `${k.AttributeName} (${k.KeyType})`).join(', '));
+      console.log(
+        '  Key schema:',
+        table.KeySchema?.map((k) => `${k.AttributeName} (${k.KeyType})`).join(', ')
+      );
       // Store partition key name for query test
       partitionKeyName = table.KeySchema?.find((k) => k.KeyType === 'HASH')?.AttributeName || null;
       console.log();
@@ -307,7 +314,10 @@ async function main() {
       console.log('  Items returned:', result.count);
       console.log('  Items scanned:', result.scannedCount);
       for (const item of result.items) {
-        console.log('  -', JSON.stringify(item).substring(0, 100) + (JSON.stringify(item).length > 100 ? '...' : ''));
+        console.log(
+          '  -',
+          JSON.stringify(item).substring(0, 100) + (JSON.stringify(item).length > 100 ? '...' : '')
+        );
       }
       console.log();
     } catch (error) {
@@ -319,7 +329,9 @@ async function main() {
 
   // Test 16: Query DynamoDB table (if we have a partition key and items)
   if (firstTable && partitionKeyName) {
-    console.log(`--- Test 16: Attempting query on "${firstTable}" by partition key "${partitionKeyName}" ---`);
+    console.log(
+      `--- Test 16: Attempting query on "${firstTable}" by partition key "${partitionKeyName}" ---`
+    );
     // First scan to get a sample partition key value
     try {
       const scanResult = await client.scanDynamoDBTable(firstTable, { limit: 1 });
@@ -334,19 +346,22 @@ async function main() {
             ? { ':pk': { N: String(pkValue) } }
             : { ':pk': { S: String(pkValue) } };
 
-          const result = await client.queryDynamoDBTable(
-            firstTable,
-            '#pk = :pk',
-            {
-              expressionAttributeNames: { '#pk': partitionKeyName },
-              expressionAttributeValues: expressionAttributeValues as Record<string, import('@aws-sdk/client-dynamodb').AttributeValue>,
-              limit: 5,
-            }
-          );
+          const result = await client.queryDynamoDBTable(firstTable, '#pk = :pk', {
+            expressionAttributeNames: { '#pk': partitionKeyName },
+            expressionAttributeValues: expressionAttributeValues as Record<
+              string,
+              import('@aws-sdk/client-dynamodb').AttributeValue
+            >,
+            limit: 5,
+          });
           console.log('Query result:');
           console.log('  Items returned:', result.count);
           for (const item of result.items) {
-            console.log('  -', JSON.stringify(item).substring(0, 100) + (JSON.stringify(item).length > 100 ? '...' : ''));
+            console.log(
+              '  -',
+              JSON.stringify(item).substring(0, 100) +
+                (JSON.stringify(item).length > 100 ? '...' : '')
+            );
           }
         } else {
           console.log('  Could not extract partition key value from sample item');
