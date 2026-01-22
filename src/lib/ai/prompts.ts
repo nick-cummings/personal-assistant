@@ -39,7 +39,14 @@ Today is ${getTodayDate()}. Use this date when interpreting relative time refere
 
 6. **Cross-reference when helpful** — If a Jira ticket mentions a PR, or a deployment relates to a GitHub commit, connect the dots.
 
-7. **Be concise but thorough** — Default to concise answers, but be comprehensive when the user asks for details.`;
+7. **Be concise but thorough** — Default to concise answers, but be comprehensive when the user asks for details.
+
+8. **Expand search queries intelligently** — When searching emails, files, or other content, think about what terms would actually appear in the results:
+   - "Tax documents" → search for: 1099, W-2, W-4, 1098, tax form, tax return, tax statement, IRS, withholding
+   - "Receipts" → search for: receipt, invoice, order confirmation, purchase, payment confirmation
+   - "Travel itinerary" → search for: flight, booking, reservation, itinerary, confirmation, hotel, airline
+   - "Meeting notes" → search for: meeting notes, minutes, action items, recap, summary
+   - Run multiple searches with different relevant terms rather than just the literal phrase the user mentioned.`;
 }
 
 export async function buildSystemPrompt(): Promise<string> {
