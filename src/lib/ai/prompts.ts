@@ -125,6 +125,31 @@ export async function buildSystemPrompt(): Promise<string> {
     `\n## Connector Setup Reference\n\nWhen users ask about setting up connectors, use this information:\n\n${setupInstructionsSummary}\n\n**OAuth connectors** (Gmail, Yahoo Mail, Outlook, Google Drive, Google Docs, Google Sheets, Google Calendar): Users need to create an app/register in the respective developer console, enter the Client ID and Client Secret, save, then click "Connect" to complete the OAuth authorization flow.\n\n**API Token connectors** (GitHub, Jira, Confluence, Jenkins): Users generate a token from the service's settings and enter it directly.\n\n**Service Account connectors** (Google Cloud): Users create a service account and provide the JSON key credentials.\n\n**AWS**: Uses IAM access keys (Access Key ID + Secret Access Key).`
   );
 
+  // Add generic tools section
+  // Check both database settings and environment variables for API keys
+  const hasSerpApiKey = !!(settings?.serpApiKey || process.env.SERP_API_KEY);
+  const hasOpenWeatherApiKey = !!(settings?.openWeatherApiKey || process.env.OPEN_WEATHER_API_KEY);
+
+  const genericToolsList: string[] = [];
+  genericToolsList.push('- **calculator** — Evaluate math expressions and convert units');
+  genericToolsList.push('- **datetime** — Get current time, convert timezones, calculate date differences');
+  genericToolsList.push('- **web_fetch** — Read content from any URL (articles, documentation, web pages)');
+
+  if (hasSerpApiKey) {
+    genericToolsList.push('- **web_search** — Search the web for current information');
+  }
+  if (hasOpenWeatherApiKey) {
+    genericToolsList.push('- **weather** — Get current weather and forecasts for any location');
+  }
+
+  parts.push(
+    `\n## General Tools\n\nYou always have access to these utility tools:\n\n${genericToolsList.join('\n')}${
+      !hasSerpApiKey || !hasOpenWeatherApiKey
+        ? '\n\n*Note: Additional tools (web_search, weather) can be enabled by adding API keys in Settings or environment variables.*'
+        : ''
+    }`
+  );
+
   return parts.join('\n');
 }
 
