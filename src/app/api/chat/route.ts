@@ -56,11 +56,19 @@ export async function POST(request: NextRequest) {
     const systemPrompt = await buildSystemPrompt();
 
     // Convert existing messages to ModelMessage format
+    // Filter out empty assistant messages (placeholders from interrupted streams)
     const messages: ModelMessage[] = [
-      ...chat.messages.map((msg) => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
-      })),
+      ...chat.messages
+        .filter((msg) => {
+          // Keep all non-assistant messages
+          if (msg.role !== 'assistant') return true;
+          // Keep assistant messages that have content or tool calls
+          return msg.content.trim() !== '' || (msg.toolCalls && Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0);
+        })
+        .map((msg) => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content || ' ', // Ensure non-empty content for API
+        })),
       { role: 'user' as const, content: message },
     ];
 
@@ -99,7 +107,7 @@ export async function POST(request: NextRequest) {
       system: systemPrompt,
       messages,
       tools,
-      stopWhen: stepCountIs(5), // Allow up to 5 tool call rounds
+      stopWhen: stepCountIs(10), // Allow up to 10 tool call rounds for complex queries
       async onFinish({ text }) {
         // Update the assistant message with final content and tool calls
         await db.message.update({
