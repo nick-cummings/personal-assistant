@@ -102,12 +102,32 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
 
   const confluence_search = tool({
     description:
-      'Search Confluence pages and content using text search. Returns matching pages with their IDs, titles, space keys, excerpts, and URLs. Use the page ID with confluence_get_page to retrieve the full content. When multiple Confluence instances are configured, queries all instances by default.',
+      'Search Confluence pages and content using text search. Supports date range filtering and multiple search terms in a single call. Returns matching pages with their IDs, titles, space keys, excerpts, and URLs. Use the page ID with confluence_get_page to retrieve the full content. When multiple Confluence instances are configured, queries all instances by default.',
     inputSchema: z.object({
       query: z
         .string()
+        .optional()
+        .default('')
         .describe(
-          'Search query text to find pages. Examples: "deployment guide", "API documentation", "onboarding process"'
+          'Single search query text to find pages. Examples: "deployment guide", "API documentation". Ignored if "queries" is provided.'
+        ),
+      queries: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Multiple search terms to search for (OR logic). Use this to search for related terms in a single call. Example: ["runbook", "playbook", "procedure"] to find operational docs.'
+        ),
+      afterDate: z
+        .string()
+        .optional()
+        .describe(
+          'Only return pages modified on or after this date. Use ISO format: "2025-01-01" or "2025-12-22T00:00:00Z"'
+        ),
+      beforeDate: z
+        .string()
+        .optional()
+        .describe(
+          'Only return pages modified before this date. Use ISO format: "2025-02-01" or "2025-01-22T23:59:59Z"'
         ),
       spaceKey: z
         .string()
@@ -122,16 +142,19 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
         .describe('Maximum number of results to return per instance (default: 10)'),
       instance: z.string().optional().describe(getInstanceDescription(client)),
     }),
-    execute: async ({ query, spaceKey, limit, instance }) => {
-      console.log('[Confluence] confluence_search called with:', {
+    execute: async ({ query, queries, afterDate, beforeDate, spaceKey, limit, instance }) => {
+      console.log(`[Confluence ${new Date().toISOString()}] confluence_search called with:`, {
         query,
+        queries,
+        afterDate,
+        beforeDate,
         spaceKey,
         limit,
         instance,
       });
 
       if (!client.hasCredentials()) {
-        console.log('[Confluence] No credentials configured');
+        console.log(`[Confluence ${new Date().toISOString()}] No credentials configured`);
         return {
           error:
             'Confluence not configured. Please add your host, email, and API token in Settings → Connectors.',
@@ -139,9 +162,9 @@ export function createConfluenceTools(client: ConfluenceClient): ToolSet {
       }
 
       try {
-        console.log('[Confluence] Querying instances for search...');
+        console.log(`[Confluence ${new Date().toISOString()}] Querying instances for search...`);
         const results = await client.queryAllInstances(
-          (instanceClient) => instanceClient.search(query, spaceKey, limit),
+          (instanceClient) => instanceClient.search(query || '', spaceKey, limit, { afterDate, beforeDate, queries }),
           instance
         );
 

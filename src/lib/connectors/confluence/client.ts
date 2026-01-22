@@ -111,24 +111,113 @@ export class ConfluenceInstanceClient {
   async search(
     query: string,
     spaceKey?: string,
-    limit: number = 20
+    limit: number = 20,
+    options?: {
+      afterDate?: string; // ISO date string - pages modified on or after this date
+      beforeDate?: string; // ISO date string - pages modified before this date
+      queries?: string[]; // Multiple search terms (OR logic)
+    }
   ): Promise<ConfluenceSearchResult> {
-    const cqlParts: string[] = [];
+    // Determine search queries - either multiple queries or single query
+    const searchQueries = options?.queries?.length ? options.queries : query ? [query] : [];
 
-    // Add text search
-    cqlParts.push(`text ~ "${query.replace(/"/g, '\\"')}"`);
+    // Build date filter CQL parts
+    const dateFilters: string[] = [];
+    if (options?.afterDate) {
+      // CQL uses format: yyyy-MM-dd or yyyy-MM-dd HH:mm
+      const afterDate = new Date(options.afterDate).toISOString().split('T')[0];
+      dateFilters.push(`lastModified >= "${afterDate}"`);
+    }
+    if (options?.beforeDate) {
+      const beforeDate = new Date(options.beforeDate).toISOString().split('T')[0];
+      dateFilters.push(`lastModified < "${beforeDate}"`);
+    }
 
-    // Add space filter if provided
+    // If we have search queries, we need to handle them with OR logic
+    if (searchQueries.length > 0) {
+      const allResults: ConfluenceSearchResult['results'] = [];
+      const seenIds = new Set<string>();
+
+      for (const q of searchQueries) {
+        console.log(`[Confluence ${new Date().toISOString()}] Searching for "${q}"`);
+
+        const cqlParts: string[] = [];
+        cqlParts.push(`text ~ "${q.replace(/"/g, '\\"')}"`);
+        if (spaceKey) {
+          cqlParts.push(`space = "${spaceKey}"`);
+        }
+        cqlParts.push('type = page');
+        cqlParts.push(...dateFilters);
+
+        const cql = encodeURIComponent(cqlParts.join(' AND '));
+        const searchUrl = `https://${this.host}/wiki/rest/api/content/search?cql=${cql}&limit=${limit}&expand=version,space`;
+
+        const response = await fetch(searchUrl, {
+          headers: {
+            Authorization: this.authHeader,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Confluence search error (${response.status}): ${error}`);
+        }
+
+        const data = await response.json();
+        const resultCount = data.results?.length || 0;
+        console.log(`[Confluence ${new Date().toISOString()}] Search for "${q}" returned ${resultCount} results`);
+
+        for (const r of data.results || []) {
+          if (!seenIds.has(r.id)) {
+            seenIds.add(r.id);
+            allResults.push({
+              content: {
+                id: r.id,
+                title: r.title,
+                type: r.type,
+                status: r.status,
+                spaceId: r.space?.key ?? '',
+                authorId: r.version?.by?.accountId ?? '',
+                createdAt: r.version?.when ?? '',
+                version: {
+                  number: r.version?.number ?? 1,
+                  createdAt: r.version?.when ?? '',
+                  authorId: r.version?.by?.accountId ?? '',
+                },
+                _links: r._links,
+              },
+              excerpt: r.excerpt ?? '',
+              lastModified: r.version?.when ?? '',
+            });
+          }
+        }
+      }
+
+      console.log(`[Confluence ${new Date().toISOString()}] Total unique results after all queries: ${allResults.length}`);
+
+      // Sort by lastModified descending and limit
+      allResults.sort((a, b) => {
+        const dateA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+        const dateB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      return {
+        results: allResults.slice(0, limit),
+        totalSize: allResults.length,
+        _links: {},
+      };
+    }
+
+    // No text search, just date filter (or get all)
+    const cqlParts: string[] = ['type = page'];
     if (spaceKey) {
       cqlParts.push(`space = "${spaceKey}"`);
     }
-
-    // Only search pages (not attachments, etc.)
-    cqlParts.push('type = page');
+    cqlParts.push(...dateFilters);
 
     const cql = encodeURIComponent(cqlParts.join(' AND '));
-
-    // Use CQL search endpoint
     const searchUrl = `https://${this.host}/wiki/rest/api/content/search?cql=${cql}&limit=${limit}&expand=version,space`;
 
     const response = await fetch(searchUrl, {
@@ -433,11 +522,16 @@ export class ConfluenceClient {
   async search(
     query: string,
     spaceKey?: string,
-    limit: number = 20
+    limit: number = 20,
+    options?: {
+      afterDate?: string;
+      beforeDate?: string;
+      queries?: string[];
+    }
   ): Promise<ConfluenceSearchResult> {
     const first = this.getAllInstances()[0];
     if (!first) throw new Error('No Confluence instances configured');
-    return first.search(query, spaceKey, limit);
+    return first.search(query, spaceKey, limit, options);
   }
 
   async getPage(pageId: string): Promise<ConfluencePage & { bodyContent: string }> {
