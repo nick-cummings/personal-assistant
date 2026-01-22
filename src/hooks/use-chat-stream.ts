@@ -16,6 +16,11 @@ export interface ToolCallInfo {
   state: 'pending' | 'result';
 }
 
+// Represents either a text segment or a tool call in the stream
+export type StreamPart =
+  | { type: 'text'; content: string }
+  | { type: 'tool-call'; toolCall: ToolCallInfo };
+
 interface StreamingMessage {
   id: string;
   role: 'assistant';
@@ -23,6 +28,8 @@ interface StreamingMessage {
   createdAt: Date;
   toolCalls: ToolCallInfo[];
   isToolRunning: boolean;
+  // Ordered sequence of text and tool calls as they occurred
+  parts: StreamPart[];
 }
 
 export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
@@ -62,6 +69,7 @@ export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
         createdAt: new Date(),
         toolCalls: [],
         isToolRunning: false,
+        parts: [],
       });
 
       try {
@@ -84,6 +92,8 @@ export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
         const decoder = new TextDecoder();
         let accumulatedContent = '';
         let toolCalls: ToolCallInfo[] = [];
+        let parts: StreamPart[] = [];
+        let currentTextSegment = ''; // Track current text segment separately
         let buffer = '';
 
         // Parse newline-delimited JSON events from fullStream
@@ -104,81 +114,118 @@ export function useChatStream({ chatId, onFinish }: UseChatStreamOptions) {
               switch (part.type) {
                 case 'text-delta':
                   accumulatedContent += part.text;
-                  setStreamingMessage((prev) =>
-                    prev ? { ...prev, content: accumulatedContent, isToolRunning: false } : null
-                  );
-                  break;
-
-                case 'tool-input-start':
-                  // Tool is starting to be called
-                  toolCalls = [
-                    ...toolCalls.filter((t) => t.id !== part.id),
-                    {
-                      id: part.id,
-                      name: part.toolName,
-                      args: {},
-                      state: 'pending' as const,
-                    },
-                  ];
-                  setStreamingMessage((prev) =>
-                    prev ? { ...prev, toolCalls, isToolRunning: true } : null
-                  );
-                  break;
-
-                case 'tool-call':
-                  // Tool call with full args (update existing or add)
-                  const existingIdx = toolCalls.findIndex((t) => t.id === part.toolCallId);
-                  if (existingIdx >= 0) {
-                    toolCalls = toolCalls.map((t) =>
-                      t.id === part.toolCallId ? { ...t, args: part.args } : t
-                    );
-                  } else {
-                    toolCalls = [
-                      ...toolCalls,
-                      {
-                        id: part.toolCallId,
-                        name: part.toolName,
-                        args: part.args || {},
-                        state: 'pending' as const,
-                      },
+                  currentTextSegment += part.text;
+                  // Update or add text part at the end
+                  const lastPart = parts[parts.length - 1];
+                  if (lastPart && lastPart.type === 'text') {
+                    // Append to existing text part (use segment-specific content)
+                    parts = [
+                      ...parts.slice(0, -1),
+                      { type: 'text', content: currentTextSegment },
                     ];
+                  } else {
+                    // Start a new text part
+                    parts = [...parts, { type: 'text', content: currentTextSegment }];
                   }
                   setStreamingMessage((prev) =>
-                    prev ? { ...prev, toolCalls, isToolRunning: true } : null
+                    prev ? { ...prev, content: accumulatedContent, parts, isToolRunning: false } : null
                   );
                   break;
 
-                case 'tool-result':
+                case 'tool-input-start': {
+                  // Tool is starting to be called - reset text segment for next text block
+                  currentTextSegment = '';
+                  const newToolCall: ToolCallInfo = {
+                    id: part.id,
+                    name: part.toolName,
+                    args: {},
+                    state: 'pending' as const,
+                  };
+                  toolCalls = [...toolCalls.filter((t) => t.id !== part.id), newToolCall];
+                  // Add tool call to parts
+                  parts = [...parts, { type: 'tool-call', toolCall: newToolCall }];
+                  setStreamingMessage((prev) =>
+                    prev ? { ...prev, toolCalls, parts, isToolRunning: true } : null
+                  );
+                  break;
+                }
+
+                case 'tool-call': {
+                  // Tool call with full args (update existing or add)
+                  const existingIdx = toolCalls.findIndex((t) => t.id === part.toolCallId);
+                  const updatedToolCall: ToolCallInfo = {
+                    id: part.toolCallId,
+                    name: part.toolName,
+                    args: part.args || {},
+                    state: 'pending' as const,
+                  };
+                  if (existingIdx >= 0) {
+                    toolCalls = toolCalls.map((t) =>
+                      t.id === part.toolCallId ? updatedToolCall : t
+                    );
+                    // Update the tool call in parts too
+                    parts = parts.map((p) =>
+                      p.type === 'tool-call' && p.toolCall.id === part.toolCallId
+                        ? { type: 'tool-call', toolCall: updatedToolCall }
+                        : p
+                    );
+                  } else {
+                    toolCalls = [...toolCalls, updatedToolCall];
+                    parts = [...parts, { type: 'tool-call', toolCall: updatedToolCall }];
+                  }
+                  setStreamingMessage((prev) =>
+                    prev ? { ...prev, toolCalls, parts, isToolRunning: true } : null
+                  );
+                  break;
+                }
+
+                case 'tool-result': {
                   // Tool finished with result
                   toolCalls = toolCalls.map((t) =>
                     t.id === part.toolCallId ? { ...t, state: 'result' as const } : t
                   );
+                  // Update the tool call state in parts
+                  parts = parts.map((p) =>
+                    p.type === 'tool-call' && p.toolCall.id === part.toolCallId
+                      ? { type: 'tool-call', toolCall: { ...p.toolCall, state: 'result' as const } }
+                      : p
+                  );
                   setStreamingMessage((prev) =>
                     prev
                       ? {
                           ...prev,
                           toolCalls,
+                          parts,
                           isToolRunning: toolCalls.some((t) => t.state === 'pending'),
                         }
                       : null
                   );
                   break;
+                }
 
-                case 'tool-error':
+                case 'tool-error': {
                   // Tool failed
                   toolCalls = toolCalls.map((t) =>
                     t.id === part.toolCallId ? { ...t, state: 'result' as const } : t
                   );
+                  // Update the tool call state in parts
+                  parts = parts.map((p) =>
+                    p.type === 'tool-call' && p.toolCall.id === part.toolCallId
+                      ? { type: 'tool-call', toolCall: { ...p.toolCall, state: 'result' as const } }
+                      : p
+                  );
                   setStreamingMessage((prev) =>
                     prev
                       ? {
                           ...prev,
                           toolCalls,
+                          parts,
                           isToolRunning: toolCalls.some((t) => t.state === 'pending'),
                         }
                       : null
                   );
                   break;
+                }
 
                 case 'error':
                   throw new Error(part.error || 'Stream error');

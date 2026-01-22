@@ -1,7 +1,7 @@
 'use client';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { ToolCallInfo } from '@/hooks/use-chat-stream';
+import type { StreamPart, ToolCallInfo } from '@/hooks/use-chat-stream';
 import type { Message } from '@/types';
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './message-bubble';
@@ -14,6 +14,7 @@ interface StreamingMessageData {
   createdAt: Date;
   toolCalls?: ToolCallInfo[];
   isToolRunning?: boolean;
+  parts?: StreamPart[];
 }
 
 interface MessageListProps {
@@ -53,6 +54,7 @@ export function MessageList({ messages, streamingMessage }: MessageListProps) {
             content={streamingMessage.content}
             toolCalls={streamingMessage.toolCalls}
             isToolRunning={streamingMessage.isToolRunning}
+            parts={streamingMessage.parts}
           />
         )}
         <div ref={scrollRef} />
