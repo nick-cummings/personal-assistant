@@ -82,9 +82,12 @@ model UserContext {
 }
 
 model Settings {
-  id               String   @id @default("singleton")
-  selectedModel    String   @default("claude-sonnet-4-20250514")
-  systemPrompt     String   @default("")
-  sidebarCollapsed Boolean  @default(false)
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default("singleton")
+  selectedModel       String   @default("claude-sonnet-4-20250514")
+  systemPrompt        String   @default("")
+  sidebarCollapsed    Boolean  @default(false)
+  // API keys for generic tools
+  serpApiKey          String?  // Web search (serpapi.com)
+  openWeatherApiKey   String?  // Weather (openweathermap.org)
+  updatedAt           DateTime @updatedAt
 }
