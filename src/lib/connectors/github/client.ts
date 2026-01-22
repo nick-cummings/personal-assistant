@@ -180,6 +180,11 @@ export class GitHubClient {
     return this.request(`/repos/${repo}/languages`);
   }
 
+  // List organizations for the authenticated user
+  async listOrganizations(): Promise<GitHubOrganization[]> {
+    return this.request('/user/orgs');
+  }
+
   // Search code in repositories
   async searchCode(
     query: string,
@@ -332,6 +337,15 @@ export interface GitHubFileContent {
   type: 'file' | 'dir';
   content?: string;
   encoding?: string;
+}
+
+export interface GitHubOrganization {
+  login: string;
+  id: number;
+  url: string;
+  repos_url: string;
+  description: string | null;
+  avatar_url: string;
 }
 
 export interface GitHubCodeSearchResult {

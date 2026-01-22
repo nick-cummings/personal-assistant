@@ -233,6 +233,46 @@ async function main() {
     console.error('List repos failed:', error);
   }
 
+  // Test 11: List organizations
+  console.log('--- Test 11: listOrganizations() ---');
+  let firstOrgName: string | null = null;
+  try {
+    const orgs = await client.listOrganizations();
+    console.log('Found', orgs.length, 'organizations:');
+    for (const org of orgs) {
+      console.log(`  - ${org.login}`);
+      console.log(`    Description: ${org.description || '(No description)'}`);
+      console.log(`    URL: https://github.com/${org.login}`);
+      if (!firstOrgName) {
+        firstOrgName = org.login;
+      }
+    }
+    console.log();
+  } catch (error) {
+    console.error('List organizations failed:', error);
+  }
+
+  // Test 12: List repos for an organization (if we found one)
+  if (firstOrgName) {
+    console.log(`--- Test 12: listRepos({ org: "${firstOrgName}" }) ---`);
+    try {
+      const repos = await client.listRepos({ org: firstOrgName, limit: 10, sort: 'updated' });
+      console.log(`Found ${repos.length} repositories in ${firstOrgName} (showing up to 10):`);
+      for (const repo of repos) {
+        console.log(`  - ${repo.full_name} (${repo.private ? 'private' : 'public'})`);
+        console.log(
+          `    Language: ${repo.language || 'N/A'}, Stars: ${repo.stargazers_count}, Forks: ${repo.forks_count}`
+        );
+        console.log(`    Last pushed: ${repo.pushed_at}`);
+      }
+      console.log();
+    } catch (error) {
+      console.error('List org repos failed:', error);
+    }
+  } else {
+    console.log('--- Test 12: Skipped (no organizations found) ---\n');
+  }
+
   console.log('=== All tests complete ===');
 }
 

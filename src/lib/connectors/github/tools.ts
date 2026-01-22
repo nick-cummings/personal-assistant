@@ -847,6 +847,51 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
     },
   });
 
+  const github_list_orgs = tool({
+    description:
+      'List GitHub organizations that the authenticated user belongs to. Returns organization names, descriptions, and URLs. Use the organization name with github_list_repos to see repositories in that organization.',
+    inputSchema: z.object({}),
+    execute: async () => {
+      console.log('[GitHub] github_list_orgs called');
+
+      if (!client.hasCredentials()) {
+        console.log('[GitHub] No credentials configured');
+        return {
+          error:
+            'GitHub not configured. Please add your Personal Access Token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        console.log('[GitHub] Fetching organizations for authenticated user');
+        const orgs = await client.listOrganizations();
+        console.log('[GitHub] Found', orgs.length, 'organizations');
+
+        return {
+          count: orgs.length,
+          organizations: orgs.map((org) => ({
+            name: org.login,
+            description: org.description || '(No description)',
+            avatarUrl: org.avatar_url,
+            url: `https://github.com/${org.login}`,
+          })),
+        };
+      } catch (error) {
+        console.error('[GitHub] List orgs error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'GitHub authentication failed. Please check your Personal Access Token in Settings → Connectors.',
+          };
+        }
+        return {
+          error: `Failed to list organizations: ${message}`,
+        };
+      }
+    },
+  });
+
   return {
     github_list_prs,
     github_get_pr,
@@ -854,6 +899,7 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
     github_list_actions_runs,
     github_get_actions_run,
     github_search_issues,
+    github_list_orgs,
     github_list_repos,
     github_get_repo_tree,
     github_get_file_content,
