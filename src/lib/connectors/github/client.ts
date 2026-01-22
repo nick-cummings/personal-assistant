@@ -126,6 +126,84 @@ export class GitHubClient {
     }
     return this.request(`/user/repos${query}`);
   }
+
+  // Get repository tree (directory structure)
+  async getRepoTree(
+    repo: string,
+    options?: { branch?: string; recursive?: boolean }
+  ): Promise<GitHubTree> {
+    // First get the default branch if not specified
+    const branch = options?.branch || 'HEAD';
+
+    // If branch is specified or HEAD, we need to get the tree SHA from the branch
+    let refResponse: { object: { sha: string } };
+    try {
+      refResponse = await this.request<{ object: { sha: string } }>(
+        `/repos/${repo}/git/ref/heads/${branch === 'HEAD' ? 'main' : branch}`
+      );
+    } catch {
+      // Try 'master' if 'main' fails
+      if (branch === 'HEAD') {
+        refResponse = await this.request<{ object: { sha: string } }>(
+          `/repos/${repo}/git/ref/heads/master`
+        );
+      } else {
+        throw new Error(`Branch "${branch}" not found`);
+      }
+    }
+
+    const commitSha = refResponse.object.sha;
+
+    // Get the commit to find the tree SHA
+    const commit: { tree: { sha: string } } = await this.request(
+      `/repos/${repo}/git/commits/${commitSha}`
+    );
+
+    const params = new URLSearchParams();
+    if (options?.recursive) params.set('recursive', '1');
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    return this.request(`/repos/${repo}/git/trees/${commit.tree.sha}${query}`);
+  }
+
+  // Get file content from a repository
+  async getFileContent(repo: string, path: string, ref?: string): Promise<GitHubFileContent> {
+    const params = new URLSearchParams();
+    if (ref) params.set('ref', ref);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    return this.request(`/repos/${repo}/contents/${path}${query}`);
+  }
+
+  // Get repository languages breakdown
+  async getRepoLanguages(repo: string): Promise<Record<string, number>> {
+    return this.request(`/repos/${repo}/languages`);
+  }
+
+  // Search code in repositories
+  async searchCode(
+    query: string,
+    options?: { repo?: string; language?: string; limit?: number }
+  ): Promise<GitHubCodeSearchResult[]> {
+    let fullQuery = query;
+    if (options?.repo) fullQuery += ` repo:${options.repo}`;
+    if (options?.language) fullQuery += ` language:${options.language}`;
+
+    const params = new URLSearchParams();
+    params.set('q', fullQuery);
+    if (options?.limit) params.set('per_page', options.limit.toString());
+
+    const response: { items: GitHubCodeSearchResult[] } = await this.request(
+      `/search/code?${params.toString()}`,
+      {
+        headers: {
+          // Request text matches for better context
+          Accept: 'application/vnd.github.text-match+json',
+        },
+      }
+    );
+    return response.items;
+  }
 }
 
 export interface GitHubRepository {
@@ -224,4 +302,60 @@ export interface GitHubSearchResult {
   updated_at: string;
   pull_request?: { url: string };
   labels: { name: string; color: string }[];
+}
+
+export interface GitHubTreeItem {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree';
+  sha: string;
+  size?: number;
+  url: string;
+}
+
+export interface GitHubTree {
+  sha: string;
+  url: string;
+  tree: GitHubTreeItem[];
+  truncated: boolean;
+}
+
+export interface GitHubFileContent {
+  name: string;
+  path: string;
+  sha: string;
+  size: number;
+  url: string;
+  html_url: string;
+  git_url: string;
+  download_url: string | null;
+  type: 'file' | 'dir';
+  content?: string;
+  encoding?: string;
+}
+
+export interface GitHubCodeSearchResult {
+  name: string;
+  path: string;
+  sha: string;
+  url: string;
+  git_url: string;
+  html_url: string;
+  repository: {
+    id: number;
+    name: string;
+    full_name: string;
+    owner: GitHubUser;
+    html_url: string;
+  };
+  text_matches?: Array<{
+    object_url: string;
+    object_type: string;
+    property: string;
+    fragment: string;
+    matches: Array<{
+      text: string;
+      indices: [number, number];
+    }>;
+  }>;
 }

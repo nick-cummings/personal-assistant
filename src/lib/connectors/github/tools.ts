@@ -430,7 +430,7 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
 
   const github_list_repos = tool({
     description:
-      'List GitHub repositories for the authenticated user or a specific organization. Returns repo names, descriptions, languages, and activity info. Great for discovering what repositories you have access to.',
+      'List GitHub repositories for the authenticated user or a specific organization. Returns repo names with full "owner/repo" format, descriptions, languages, and activity info. IMPORTANT: Always use this tool FIRST when the user mentions a repository by name only (e.g., "writers-platform") to find the correct full repository name from the user\'s own repos before using other tools like github_get_repo_tree or github_search_code.',
     inputSchema: z.object({
       org: z
         .string()
@@ -512,6 +512,341 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
     },
   });
 
+  const github_get_repo_tree = tool({
+    description:
+      'Get the directory tree (file and folder structure) of a GitHub repository. Returns file paths, types, and sizes. Use this to understand a repository\'s structure before reading specific files. CRITICAL: You MUST use github_list_repos FIRST when the user mentions a repo by name only to get the correct "owner/repo" from their own repos - do NOT guess or search.',
+    inputSchema: z.object({
+      repo: z
+        .string()
+        .describe(
+          'Repository in format "owner/repo" (e.g., "facebook/react"). You MUST get this from github_list_repos results first - never guess the owner.'
+        ),
+      branch: z
+        .string()
+        .optional()
+        .describe(
+          'Branch name to get the tree from (e.g., "main", "develop"). Defaults to the default branch.'
+        ),
+      recursive: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          'If true (default), returns all files in all subdirectories. If false, only returns top-level items.'
+        ),
+      maxFiles: z
+        .number()
+        .optional()
+        .default(100)
+        .describe(
+          'Maximum number of files to return (default: 100). Use smaller values to avoid token limits. Set to 0 for unlimited.'
+        ),
+    }),
+    execute: async ({ repo, branch, recursive, maxFiles }) => {
+      console.log('[GitHub] github_get_repo_tree called with:', { repo, branch, recursive, maxFiles });
+
+      if (!client.hasCredentials()) {
+        console.log('[GitHub] No credentials configured');
+        return {
+          error:
+            'GitHub not configured. Please add your Personal Access Token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        const fullRepo = repo.includes('/') ? repo : `${client.defaultOwner}/${repo}`;
+        console.log('[GitHub] Fetching repo tree for:', fullRepo);
+        const tree = await client.getRepoTree(fullRepo, { branch, recursive });
+        console.log('[GitHub] Found', tree.tree.length, 'items in tree');
+
+        // Organize into a more useful structure
+        const allFiles = tree.tree.filter((item) => item.type === 'blob');
+        const directories = tree.tree.filter((item) => item.type === 'tree');
+
+        // Apply maxFiles limit
+        const limit = maxFiles || 0;
+        const files = limit > 0 ? allFiles.slice(0, limit) : allFiles;
+        const filesLimited = limit > 0 && allFiles.length > limit;
+
+        return {
+          repository: fullRepo,
+          branch: branch || '(default)',
+          truncated: tree.truncated || filesLimited,
+          totalItems: tree.tree.length,
+          fileCount: allFiles.length,
+          filesReturned: files.length,
+          directoryCount: directories.length,
+          files: files.map((f) => ({
+            path: f.path,
+            size: f.size,
+          })),
+          directories: directories.map((d) => d.path),
+          note: filesLimited
+            ? `Showing first ${limit} of ${allFiles.length} files. Use maxFiles parameter to see more.`
+            : undefined,
+        };
+      } catch (error) {
+        console.error('[GitHub] Get repo tree error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'GitHub authentication failed. Please check your Personal Access Token in Settings → Connectors.',
+          };
+        }
+        if (message.includes('404') || message.includes('Not Found')) {
+          return {
+            error: `Repository "${repo}" not found or you don't have access to it.`,
+          };
+        }
+        return {
+          error: `Failed to get repository tree: ${message}`,
+        };
+      }
+    },
+  });
+
+  const github_get_file_content = tool({
+    description:
+      'Read the contents of a specific file from a GitHub repository. Returns the decoded file content. Use github_get_repo_tree first to find file paths. Best for reading README, config files, and source code. Large files are automatically truncated. CRITICAL: You MUST use github_list_repos FIRST when the user mentions a repo by name only to get the correct "owner/repo" - never guess the owner.',
+    inputSchema: z.object({
+      repo: z
+        .string()
+        .describe(
+          'Repository in format "owner/repo" (e.g., "facebook/react"). Get this from github_list_repos or github_get_repo_tree results.'
+        ),
+      path: z
+        .string()
+        .describe(
+          'Path to the file within the repository (e.g., "README.md", "package.json", "src/index.ts"). Get this from github_get_repo_tree results.'
+        ),
+      ref: z
+        .string()
+        .optional()
+        .describe(
+          'Branch name, tag, or commit SHA to read from (e.g., "main", "v1.0.0", "abc123"). Defaults to the default branch.'
+        ),
+      maxBytes: z
+        .number()
+        .optional()
+        .default(15000)
+        .describe(
+          'Maximum bytes of content to return (default: 15000, ~15KB). Use smaller values when reading multiple files. Set to 0 for no limit (use with caution).'
+        ),
+    }),
+    execute: async ({ repo, path, ref, maxBytes }) => {
+      console.log('[GitHub] github_get_file_content called with:', { repo, path, ref, maxBytes });
+
+      if (!client.hasCredentials()) {
+        console.log('[GitHub] No credentials configured');
+        return {
+          error:
+            'GitHub not configured. Please add your Personal Access Token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        const fullRepo = repo.includes('/') ? repo : `${client.defaultOwner}/${repo}`;
+        console.log('[GitHub] Fetching file content for:', fullRepo, path);
+        const file = await client.getFileContent(fullRepo, path, ref);
+        console.log('[GitHub] Got file:', { name: file.name, size: file.size });
+
+        // Decode base64 content
+        let content = '(Unable to decode content)';
+        let truncated = false;
+        if (file.content && file.encoding === 'base64') {
+          content = Buffer.from(file.content, 'base64').toString('utf-8');
+
+          // Truncate if needed
+          const limit = maxBytes || 0;
+          if (limit > 0 && content.length > limit) {
+            content = content.slice(0, limit);
+            truncated = true;
+          }
+        }
+
+        return {
+          name: file.name,
+          path: file.path,
+          size: file.size,
+          url: file.html_url,
+          truncated,
+          truncatedAt: truncated ? maxBytes : undefined,
+          content,
+        };
+      } catch (error) {
+        console.error('[GitHub] Get file content error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'GitHub authentication failed. Please check your Personal Access Token in Settings → Connectors.',
+          };
+        }
+        if (message.includes('404') || message.includes('Not Found')) {
+          return {
+            error: `File "${path}" not found in "${repo}". Check the path and ensure you have access.`,
+          };
+        }
+        if (message.includes('too large')) {
+          return {
+            error: `File "${path}" is too large to fetch via the API. Try using the raw download URL instead.`,
+          };
+        }
+        return {
+          error: `Failed to get file content: ${message}`,
+        };
+      }
+    },
+  });
+
+  const github_get_repo_languages = tool({
+    description:
+      'Get the programming language breakdown for a GitHub repository. Returns languages with their byte counts and percentages. Useful for understanding the tech stack. CRITICAL: You MUST use github_list_repos FIRST when the user mentions a repo by name only to get the correct "owner/repo" - never guess the owner.',
+    inputSchema: z.object({
+      repo: z
+        .string()
+        .describe(
+          'Repository in format "owner/repo" (e.g., "facebook/react", "microsoft/typescript"). Get this from github_list_repos results.'
+        ),
+    }),
+    execute: async ({ repo }) => {
+      console.log('[GitHub] github_get_repo_languages called with:', { repo });
+
+      if (!client.hasCredentials()) {
+        console.log('[GitHub] No credentials configured');
+        return {
+          error:
+            'GitHub not configured. Please add your Personal Access Token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        const fullRepo = repo.includes('/') ? repo : `${client.defaultOwner}/${repo}`;
+        console.log('[GitHub] Fetching languages for:', fullRepo);
+        const languages = await client.getRepoLanguages(fullRepo);
+        console.log('[GitHub] Found languages:', Object.keys(languages));
+
+        // Calculate percentages
+        const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+        const languagesWithPercentages = Object.entries(languages).map(([language, bytes]) => ({
+          language,
+          bytes,
+          percentage: totalBytes > 0 ? Math.round((bytes / totalBytes) * 1000) / 10 : 0,
+        }));
+
+        // Sort by bytes descending
+        languagesWithPercentages.sort((a, b) => b.bytes - a.bytes);
+
+        return {
+          repository: fullRepo,
+          totalBytes,
+          languageCount: languagesWithPercentages.length,
+          languages: languagesWithPercentages,
+        };
+      } catch (error) {
+        console.error('[GitHub] Get repo languages error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'GitHub authentication failed. Please check your Personal Access Token in Settings → Connectors.',
+          };
+        }
+        if (message.includes('404') || message.includes('Not Found')) {
+          return {
+            error: `Repository "${repo}" not found or you don't have access to it.`,
+          };
+        }
+        return {
+          error: `Failed to get repository languages: ${message}`,
+        };
+      }
+    },
+  });
+
+  const github_search_code = tool({
+    description:
+      'Search for code patterns within repositories. WARNING: This searches ALL of GitHub by default which may return repos from other users. CRITICAL: When the user mentions a specific repo by name, you MUST first use github_list_repos to get the correct "owner/repo" from their own repos, then pass that to the repo parameter. Never use this tool without the repo parameter when the user is asking about their own repository.',
+    inputSchema: z.object({
+      query: z
+        .string()
+        .describe(
+          'Search query for code content. Examples: "useState" (find React hooks), "class UserService" (find class definitions), "import express" (find Express usage), "TODO" (find todo comments), "function authenticate" (find auth functions)'
+        ),
+      repo: z
+        .string()
+        .optional()
+        .describe(
+          'Limit search to a specific repository in format "owner/repo" (e.g., "facebook/react"). Omit to search across all accessible repositories.'
+        ),
+      language: z
+        .string()
+        .optional()
+        .describe(
+          'Filter by programming language (e.g., "typescript", "python", "javascript", "go", "rust")'
+        ),
+      limit: z
+        .number()
+        .optional()
+        .default(20)
+        .describe('Maximum number of results to return (default: 20, max: 100)'),
+    }),
+    execute: async ({ query, repo, language, limit }) => {
+      console.log('[GitHub] github_search_code called with:', { query, repo, language, limit });
+
+      if (!client.hasCredentials()) {
+        console.log('[GitHub] No credentials configured');
+        return {
+          error:
+            'GitHub not configured. Please add your Personal Access Token in Settings → Connectors.',
+        };
+      }
+
+      try {
+        const fullRepo = repo && !repo.includes('/') ? `${client.defaultOwner}/${repo}` : repo;
+        console.log('[GitHub] Searching code with query:', query);
+        const results = await client.searchCode(query, { repo: fullRepo, language, limit });
+        console.log('[GitHub] Found', results.length, 'code matches');
+
+        return {
+          query,
+          filters: {
+            repo: fullRepo || '(all repositories)',
+            language: language || '(all languages)',
+          },
+          count: results.length,
+          results: results.map((result) => ({
+            repository: result.repository.full_name,
+            file: result.name,
+            path: result.path,
+            url: result.html_url,
+            matches: result.text_matches?.map((match) => ({
+              fragment: match.fragment,
+            })),
+          })),
+        };
+      } catch (error) {
+        console.error('[GitHub] Search code error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('401') || message.includes('Unauthorized')) {
+          return {
+            error:
+              'GitHub authentication failed. Please check your Personal Access Token in Settings → Connectors.',
+          };
+        }
+        if (message.includes('422') || message.includes('Validation')) {
+          return {
+            error: `Invalid search query: ${message}. Check your search syntax.`,
+          };
+        }
+        return {
+          error: `Failed to search code: ${message}`,
+        };
+      }
+    },
+  });
+
   return {
     github_list_prs,
     github_get_pr,
@@ -520,5 +855,9 @@ export function createGitHubTools(client: GitHubClient): ToolSet {
     github_get_actions_run,
     github_search_issues,
     github_list_repos,
+    github_get_repo_tree,
+    github_get_file_content,
+    github_get_repo_languages,
+    github_search_code,
   };
 }
