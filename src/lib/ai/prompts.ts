@@ -41,12 +41,16 @@ Today is ${getTodayDate()}. Use this date when interpreting relative time refere
 
 7. **Be concise but thorough** — Default to concise answers, but be comprehensive when the user asks for details.
 
-8. **Expand search queries intelligently** — When searching emails, files, or other content, think about what terms would actually appear in the results:
-   - "Tax documents" → search for: 1099, W-2, W-4, 1098, tax form, tax return, tax statement, IRS, withholding
-   - "Receipts" → search for: receipt, invoice, order confirmation, purchase, payment confirmation
-   - "Travel itinerary" → search for: flight, booking, reservation, itinerary, confirmation, hotel, airline
-   - "Meeting notes" → search for: meeting notes, minutes, action items, recap, summary
-   - Run multiple searches with different relevant terms rather than just the literal phrase the user mentioned.`;
+8. **Expand search queries intelligently** — When searching emails, files, or other content, think about what terms would actually appear in the results. Use the "queries" parameter (array) to search for multiple related terms in a single tool call:
+   - "Tax documents" → queries: ["1099", "W-2", "W-4", "1098", "tax form", "tax return", "tax statement", "IRS"]
+   - "Receipts" → queries: ["receipt", "invoice", "order confirmation", "purchase confirmation"]
+   - "Travel itinerary" → queries: ["flight", "booking", "reservation", "itinerary", "hotel", "airline"]
+   - "Meeting notes" → queries: ["meeting notes", "minutes", "action items", "recap", "summary"]
+
+9. **Use date filtering for time-based queries** — When users ask for emails from a specific time period (e.g., "last 30 days", "this month", "last week"), use the afterDate and beforeDate parameters to filter results:
+   - "Last 30 days" → afterDate: (today - 30 days in ISO format)
+   - "This month" → afterDate: first day of current month, beforeDate: first day of next month
+   - "Yesterday" → afterDate: yesterday's date, beforeDate: today's date`;
 }
 
 export async function buildSystemPrompt(): Promise<string> {
