@@ -83,15 +83,41 @@ export function createGoogleDriveTools(client: GoogleDriveClient): ToolSet {
     }),
 
     google_drive_search: tool({
-      description: 'Search for files in Google Drive by content',
+      description:
+        'Search for files in Google Drive by content. Supports date range filtering and multiple search terms in a single call.',
       inputSchema: z.object({
-        query: z.string().describe('Search query'),
+        query: z
+          .string()
+          .optional()
+          .default('')
+          .describe(
+            'Single search query (e.g., "quarterly report", "budget 2025"). Ignored if "queries" is provided.'
+          ),
+        queries: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Multiple search terms to search for (OR logic). Use this to search for related terms in a single call. Example: ["invoice", "receipt", "statement"] to find financial documents.'
+          ),
+        afterDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return files modified on or after this date. Use ISO format: "2025-01-01" or "2025-12-22T00:00:00Z"'
+          ),
+        beforeDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return files modified before this date. Use ISO format: "2025-02-01" or "2025-01-22T23:59:59Z"'
+          ),
         fileType: z
           .enum(['document', 'spreadsheet', 'presentation', 'pdf', 'any'])
           .optional()
           .describe('Filter by file type'),
+        limit: z.number().optional().default(50).describe('Maximum number of results to return'),
       }),
-      execute: async ({ query, fileType }) => {
+      execute: async ({ query, queries, afterDate, beforeDate, fileType, limit }) => {
         let mimeType: string | undefined;
         switch (fileType) {
           case 'document':
@@ -108,7 +134,12 @@ export function createGoogleDriveTools(client: GoogleDriveClient): ToolSet {
             break;
         }
 
-        const files = await client.searchFiles(query, mimeType);
+        const files = await client.searchFiles(query || '', mimeType, {
+          afterDate,
+          beforeDate,
+          queries,
+          limit,
+        });
         return {
           count: files.length,
           files: files.map((file) => ({

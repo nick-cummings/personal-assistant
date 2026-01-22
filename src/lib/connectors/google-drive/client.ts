@@ -114,21 +114,89 @@ export class GoogleDriveClient extends OAuthClient<OAuthConfig> {
     return response.files || [];
   }
 
-  async searchFiles(query: string, mimeType?: string): Promise<DriveFile[]> {
+  async searchFiles(
+    query: string,
+    mimeType?: string,
+    options?: {
+      afterDate?: string; // ISO date string - files modified on or after this date
+      beforeDate?: string; // ISO date string - files modified before this date
+      queries?: string[]; // Multiple search terms (OR logic)
+      limit?: number;
+    }
+  ): Promise<DriveFile[]> {
+    const limit = options?.limit || 50;
+
+    // Determine search queries - either multiple queries or single query
+    const searchQueries = options?.queries?.length ? options.queries : query ? [query] : [];
+
+    // Build date filter parts
+    const dateFilters: string[] = [];
+    if (options?.afterDate) {
+      dateFilters.push(`modifiedTime >= '${new Date(options.afterDate).toISOString()}'`);
+    }
+    if (options?.beforeDate) {
+      dateFilters.push(`modifiedTime < '${new Date(options.beforeDate).toISOString()}'`);
+    }
+
+    // If we have search queries, we need to handle them with OR logic
+    if (searchQueries.length > 0) {
+      const allFiles: DriveFile[] = [];
+      const seenIds = new Set<string>();
+
+      for (const q of searchQueries) {
+        console.log(`[Google Drive ${new Date().toISOString()}] Searching for "${q}"`);
+
+        const params = new URLSearchParams({
+          pageSize: String(limit),
+          fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,owners)',
+        });
+
+        const queryParts = [`fullText contains '${q.replace(/'/g, "\\'")}'`, 'trashed = false'];
+        if (mimeType) {
+          queryParts.push(`mimeType = '${mimeType}'`);
+        }
+        queryParts.push(...dateFilters);
+
+        params.set('q', queryParts.join(' and '));
+
+        const response = await this.fetch<{ files: DriveFile[] }>(`/files?${params.toString()}`);
+        const resultCount = response.files?.length || 0;
+        console.log(`[Google Drive ${new Date().toISOString()}] Search for "${q}" returned ${resultCount} results`);
+
+        for (const file of response.files || []) {
+          if (!seenIds.has(file.id)) {
+            seenIds.add(file.id);
+            allFiles.push(file);
+          }
+        }
+      }
+
+      console.log(`[Google Drive ${new Date().toISOString()}] Total unique results after all queries: ${allFiles.length}`);
+
+      // Sort by modifiedTime descending and limit
+      allFiles.sort((a, b) => {
+        const dateA = a.modifiedTime ? new Date(a.modifiedTime).getTime() : 0;
+        const dateB = b.modifiedTime ? new Date(b.modifiedTime).getTime() : 0;
+        return dateB - dateA;
+      });
+      return allFiles.slice(0, limit);
+    }
+
+    // No search query, just date filter (or get all)
     const params = new URLSearchParams({
-      pageSize: '50',
+      pageSize: String(limit),
       fields: 'files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,owners)',
     });
 
-    const queryParts = [`fullText contains '${query}'`, 'trashed = false'];
+    const queryParts = ['trashed = false'];
     if (mimeType) {
       queryParts.push(`mimeType = '${mimeType}'`);
     }
+    queryParts.push(...dateFilters);
 
     params.set('q', queryParts.join(' and '));
 
     const response = await this.fetch<{ files: DriveFile[] }>(`/files?${params.toString()}`);
-
     return response.files || [];
   }
 
