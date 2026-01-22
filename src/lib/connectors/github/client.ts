@@ -132,25 +132,18 @@ export class GitHubClient {
     repo: string,
     options?: { branch?: string; recursive?: boolean }
   ): Promise<GitHubTree> {
-    // First get the default branch if not specified
-    const branch = options?.branch || 'HEAD';
+    let branch = options?.branch;
 
-    // If branch is specified or HEAD, we need to get the tree SHA from the branch
-    let refResponse: { object: { sha: string } };
-    try {
-      refResponse = await this.request<{ object: { sha: string } }>(
-        `/repos/${repo}/git/ref/heads/${branch === 'HEAD' ? 'main' : branch}`
-      );
-    } catch {
-      // Try 'master' if 'main' fails
-      if (branch === 'HEAD') {
-        refResponse = await this.request<{ object: { sha: string } }>(
-          `/repos/${repo}/git/ref/heads/master`
-        );
-      } else {
-        throw new Error(`Branch "${branch}" not found`);
-      }
+    // If no branch specified, fetch the repo to get the default branch
+    if (!branch) {
+      const repoInfo = await this.request<{ default_branch: string }>(`/repos/${repo}`);
+      branch = repoInfo.default_branch;
     }
+
+    // Get the branch ref to find the commit SHA
+    const refResponse = await this.request<{ object: { sha: string } }>(
+      `/repos/${repo}/git/ref/heads/${branch}`
+    );
 
     const commitSha = refResponse.object.sha;
 
