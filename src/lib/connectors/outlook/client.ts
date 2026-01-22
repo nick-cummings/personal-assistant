@@ -112,14 +112,89 @@ export class OutlookClient extends OAuthClient<OutlookConfig> {
     };
   }
 
-  async searchEmails(query: string, folder?: string, limit: number = 20): Promise<GraphMessage[]> {
+  async searchEmails(
+    query: string,
+    folder?: string,
+    limit: number = 20,
+    options?: {
+      afterDate?: string; // ISO date string
+      beforeDate?: string; // ISO date string
+      queries?: string[]; // Multiple search terms (OR logic)
+    }
+  ): Promise<GraphMessage[]> {
     const folderPath = folder ? `/mailFolders/${encodeURIComponent(folder)}` : '';
-    const searchQuery = encodeURIComponent(query);
 
-    const response = await this.fetch<{ value: GraphMessage[] }>(
-      `/me${folderPath}/messages?$search="${searchQuery}"&$top=${limit}&$select=id,subject,bodyPreview,from,toRecipients,receivedDateTime,sentDateTime,isRead,importance,hasAttachments,webLink`
-    );
+    // Determine search queries - either multiple queries or single query
+    const searchQueries = options?.queries?.length ? options.queries : query ? [query] : [];
 
+    // Build date filter
+    const dateFilters: string[] = [];
+    if (options?.afterDate) {
+      dateFilters.push(`receivedDateTime ge ${new Date(options.afterDate).toISOString()}`);
+    }
+    if (options?.beforeDate) {
+      dateFilters.push(`receivedDateTime lt ${new Date(options.beforeDate).toISOString()}`);
+    }
+    const dateFilter = dateFilters.length > 0 ? dateFilters.join(' and ') : '';
+
+    // If we have search queries, we need to handle them
+    // Note: Microsoft Graph $search doesn't support OR, so we make multiple requests
+    if (searchQueries.length > 0) {
+      const allMessages: GraphMessage[] = [];
+      const seenIds = new Set<string>();
+
+      for (const q of searchQueries) {
+        const searchQuery = encodeURIComponent(q);
+        let url = `/me${folderPath}/messages?$search="${searchQuery}"&$top=${limit}&$select=id,subject,bodyPreview,from,toRecipients,receivedDateTime,sentDateTime,isRead,importance,hasAttachments,webLink`;
+
+        // Add date filter if present (can combine $search and $filter)
+        if (dateFilter) {
+          url += `&$filter=${encodeURIComponent(dateFilter)}`;
+        }
+
+        try {
+          const response = await this.fetch<{ value: GraphMessage[] }>(url);
+          for (const msg of response.value) {
+            if (!seenIds.has(msg.id)) {
+              seenIds.add(msg.id);
+              allMessages.push(msg);
+            }
+          }
+        } catch (error) {
+          // Microsoft Graph might not support combining $search and $filter
+          // In that case, just do the search and filter client-side
+          console.warn('[Outlook] Combined search+filter failed, trying search only:', error);
+          const fallbackUrl = `/me${folderPath}/messages?$search="${searchQuery}"&$top=${limit * 2}&$select=id,subject,bodyPreview,from,toRecipients,receivedDateTime,sentDateTime,isRead,importance,hasAttachments,webLink`;
+          const response = await this.fetch<{ value: GraphMessage[] }>(fallbackUrl);
+
+          for (const msg of response.value) {
+            if (seenIds.has(msg.id)) continue;
+
+            // Client-side date filtering
+            const msgDate = new Date(msg.receivedDateTime);
+            if (options?.afterDate && msgDate < new Date(options.afterDate)) continue;
+            if (options?.beforeDate && msgDate >= new Date(options.beforeDate)) continue;
+
+            seenIds.add(msg.id);
+            allMessages.push(msg);
+          }
+        }
+      }
+
+      // Sort by receivedDateTime descending and limit
+      allMessages.sort(
+        (a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime()
+      );
+      return allMessages.slice(0, limit);
+    }
+
+    // No search query, just date filter (or get all)
+    let url = `/me${folderPath}/messages?$top=${limit}&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,from,toRecipients,receivedDateTime,sentDateTime,isRead,importance,hasAttachments,webLink`;
+    if (dateFilter) {
+      url += `&$filter=${encodeURIComponent(dateFilter)}`;
+    }
+
+    const response = await this.fetch<{ value: GraphMessage[] }>(url);
     return response.value;
   }
 

@@ -50,31 +50,80 @@ export class GmailImapClient {
     });
   }
 
-  async searchEmails(query: string, maxResults: number = 20): Promise<GmailEmail[]> {
+  async searchEmails(
+    query: string,
+    maxResults: number = 20,
+    options?: {
+      afterDate?: string; // ISO date string
+      beforeDate?: string; // ISO date string
+      queries?: string[]; // Multiple search terms (OR logic)
+    }
+  ): Promise<GmailEmail[]> {
     const client = this.createClient();
     const emails: GmailEmail[] = [];
+    const seenUids = new Set<number>();
 
     try {
       await client.connect();
       const lock = await client.getMailboxLock('[Gmail]/All Mail');
 
       try {
+        // Build base date criteria object (properties are ANDed together in ImapFlow)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let searchCriteria: any = { all: true };
-
-        if (query) {
-          // IMAP TEXT search includes subject and body
-          searchCriteria = { text: query };
+        const baseCriteria: any = {};
+        if (options?.afterDate) {
+          baseCriteria.since = new Date(options.afterDate);
+        }
+        if (options?.beforeDate) {
+          baseCriteria.before = new Date(options.beforeDate);
         }
 
-        const searchResult = await client.search(searchCriteria, { uid: true });
+        // Determine search queries - either multiple queries or single query
+        const searchQueries = options?.queries?.length ? options.queries : query ? [query] : [];
 
-        if (!searchResult || !Array.isArray(searchResult) || searchResult.length === 0) {
+        // If no text queries, just search with date criteria or all
+        if (searchQueries.length === 0) {
+          const searchCriteria = Object.keys(baseCriteria).length > 0 ? baseCriteria : { all: true };
+
+          const searchResult = await client.search(searchCriteria, { uid: true });
+          if (searchResult && Array.isArray(searchResult)) {
+            for (const uid of searchResult) {
+              seenUids.add(uid);
+            }
+          }
+        } else {
+          // Search for each query term and combine results (OR logic across queries)
+          for (const q of searchQueries) {
+            // Combine text search with date criteria in a single object (ANDed together)
+            const searchCriteria = {
+              text: q,
+              ...baseCriteria,
+            };
+
+            console.log(`[Gmail ${new Date().toISOString()}] Searching for "${q}" with criteria:`, JSON.stringify(searchCriteria, (key, value) =>
+              value instanceof Date ? value.toISOString() : value
+            ));
+
+            const searchResult = await client.search(searchCriteria, { uid: true });
+            const resultCount = searchResult && Array.isArray(searchResult) ? searchResult.length : 0;
+            console.log(`[Gmail ${new Date().toISOString()}] Search for "${q}" returned ${resultCount} results`);
+
+            if (searchResult && Array.isArray(searchResult)) {
+              for (const uid of searchResult) {
+                seenUids.add(uid);
+              }
+            }
+          }
+          console.log(`[Gmail ${new Date().toISOString()}] Total unique results after all queries: ${seenUids.size}`);
+        }
+
+        if (seenUids.size === 0) {
           return [];
         }
 
-        // Get the most recent messages (last N)
-        const recentUids = searchResult.slice(-maxResults).reverse();
+        // Convert to array, sort by UID (most recent last), take last N, then reverse for most recent first
+        const allUids = Array.from(seenUids).sort((a, b) => a - b);
+        const recentUids = allUids.slice(-maxResults).reverse();
 
         for (const uid of recentUids) {
           const message = await client.fetchOne(

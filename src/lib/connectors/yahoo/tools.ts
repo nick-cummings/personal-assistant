@@ -7,12 +7,32 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
   return {
     yahoo_search_emails: tool({
       description:
-        'Search for emails in Yahoo Mail. Returns a list of emails with their numeric IDs, subjects, senders, dates, and snippets. Use the returned numeric ID (e.g., "364833") with yahoo_get_email to retrieve the full email body.',
+        'Search for emails in Yahoo Mail. Returns a list of emails with their numeric IDs, subjects, senders, dates, and snippets. Use the returned numeric ID (e.g., "364833") with yahoo_get_email to retrieve the full email body. Supports date range filtering and multiple search terms in a single call.',
       inputSchema: z.object({
         query: z
           .string()
+          .optional()
+          .default('')
           .describe(
-            'Search query to find emails. Searches subject and body. Use empty string "" to get recent emails. Examples: "invoice", "from John", "meeting notes"'
+            'Single search query to find emails. Searches subject and body. Use empty string "" to get recent emails. Ignored if "queries" is provided.'
+          ),
+        queries: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Multiple search terms to search for (OR logic). Use this to search for related terms in a single call. Example: ["1099", "W-2", "tax form", "tax return"] to find tax documents.'
+          ),
+        afterDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return emails received on or after this date. Use ISO format: "2025-01-01" or "2025-12-22T00:00:00Z"'
+          ),
+        beforeDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return emails received before this date. Use ISO format: "2025-02-01" or "2025-01-22T23:59:59Z"'
           ),
         maxResults: z
           .number()
@@ -20,11 +40,11 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
           .default(20)
           .describe('Maximum number of emails to return (default: 20)'),
       }),
-      execute: async ({ query, maxResults }) => {
-        console.log('[Yahoo] yahoo_search_emails called with:', { query, maxResults });
+      execute: async ({ query, queries, afterDate, beforeDate, maxResults }) => {
+        console.log(`[Yahoo ${new Date().toISOString()}] yahoo_search_emails called with:`, { query, queries, afterDate, beforeDate, maxResults });
 
         if (!client.hasCredentials()) {
-          console.log('[Yahoo] No credentials configured');
+          console.log(`[Yahoo ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
@@ -32,9 +52,13 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
         }
 
         try {
-          console.log('[Yahoo] Calling client.searchEmails...');
-          const emails = await client.searchEmails(query, maxResults);
-          console.log('[Yahoo] Search returned', emails.length, 'emails');
+          console.log(`[Yahoo ${new Date().toISOString()}] Calling client.searchEmails...`);
+          const emails = await client.searchEmails(query || '', maxResults, {
+            afterDate,
+            beforeDate,
+            queries,
+          });
+          console.log(`[Yahoo ${new Date().toISOString()}] Search returned ${emails.length} emails`);
           return {
             count: emails.length,
             emails: emails.map((email) => ({
@@ -74,18 +98,18 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
           ),
       }),
       execute: async ({ messageId }) => {
-        console.log('[Yahoo] yahoo_get_email called with messageId:', messageId);
+        console.log(`[Yahoo ${new Date().toISOString()}] yahoo_get_email called with messageId:`, messageId);
 
         // Validate that messageId is numeric (IMAP UID format)
         if (!/^\d+$/.test(messageId)) {
-          console.log('[Yahoo] Invalid messageId format (not numeric):', messageId);
+          console.log(`[Yahoo ${new Date().toISOString()}] Invalid messageId format (not numeric):`, messageId);
           return {
             error: `Invalid email ID format: "${messageId}". The messageId must be a numeric ID (e.g., "364833") as returned by yahoo_search_emails. Please search for emails first to get valid IDs.`,
           };
         }
 
         if (!client.hasCredentials()) {
-          console.log('[Yahoo] No credentials configured');
+          console.log(`[Yahoo ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Yahoo Mail not configured. Please add your email and app password in Settings → Connectors.',
@@ -93,9 +117,9 @@ export function createYahooTools(client: YahooImapClient): ToolSet {
         }
 
         try {
-          console.log('[Yahoo] Calling client.getEmail...');
+          console.log(`[Yahoo ${new Date().toISOString()}] Calling client.getEmail...`);
           const email = await client.getEmail(messageId);
-          console.log('[Yahoo] Got email:', {
+          console.log(`[Yahoo ${new Date().toISOString()}] Got email:`, {
             id: email.id,
             subject: email.subject,
             bodyLength: email.body?.length,

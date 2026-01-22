@@ -6,12 +6,32 @@ import { OutlookClient } from './client';
 export function createOutlookTools(client: OutlookClient): ToolSet {
   const outlook_search_emails = tool({
     description:
-      'Search emails in Outlook using Microsoft Search. Can search by subject, sender, content, etc.',
+      'Search emails in Outlook using Microsoft Search. Can search by subject, sender, content, etc. Supports date range filtering and multiple search terms in a single call.',
     inputSchema: z.object({
       query: z
         .string()
+        .optional()
+        .default('')
         .describe(
-          'Search query (e.g., "from:john@example.com", "subject:meeting", "deployment failed")'
+          'Single search query (e.g., "from:john@example.com", "subject:meeting", "deployment failed"). Ignored if "queries" is provided.'
+        ),
+      queries: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Multiple search terms to search for (OR logic). Use this to search for related terms in a single call. Example: ["1099", "W-2", "tax form", "tax return"] to find tax documents.'
+        ),
+      afterDate: z
+        .string()
+        .optional()
+        .describe(
+          'Only return emails received on or after this date. Use ISO format: "2025-01-01" or "2025-12-22T00:00:00Z"'
+        ),
+      beforeDate: z
+        .string()
+        .optional()
+        .describe(
+          'Only return emails received before this date. Use ISO format: "2025-02-01" or "2025-01-22T23:59:59Z"'
         ),
       folder: z
         .string()
@@ -19,14 +39,18 @@ export function createOutlookTools(client: OutlookClient): ToolSet {
         .describe('Folder ID to search in (use outlook_list_folders to get IDs)'),
       limit: z.number().optional().default(10).describe('Maximum number of results to return'),
     }),
-    execute: async ({ query, folder, limit }) => {
+    execute: async ({ query, queries, afterDate, beforeDate, folder, limit }) => {
       if (!client.hasRefreshToken()) {
         return {
           error: 'Outlook not authorized. Please visit /api/auth/outlook to complete OAuth setup.',
         };
       }
 
-      const messages = await client.searchEmails(query, folder, limit);
+      const messages = await client.searchEmails(query || '', folder, limit, {
+        afterDate,
+        beforeDate,
+        queries,
+      });
 
       return messages.map((msg) => ({
         id: msg.id,

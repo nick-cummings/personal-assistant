@@ -7,12 +7,32 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
   return {
     gmail_search_emails: tool({
       description:
-        'Search for emails in Gmail. Returns a list of emails with their numeric IDs, subjects, senders, dates, and snippets. Use the returned numeric ID (e.g., "46161") with gmail_get_email to retrieve the full email body.',
+        'Search for emails in Gmail. Returns a list of emails with their numeric IDs, subjects, senders, dates, and snippets. Use the returned numeric ID (e.g., "46161") with gmail_get_email to retrieve the full email body. Supports date range filtering and multiple search terms in a single call.',
       inputSchema: z.object({
         query: z
           .string()
+          .optional()
+          .default('')
           .describe(
-            'Search query to find emails. Searches subject and body. Use empty string "" to get recent emails. Examples: "invoice", "from John", "meeting notes"'
+            'Single search query to find emails. Searches subject and body. Use empty string "" to get recent emails. Ignored if "queries" is provided.'
+          ),
+        queries: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Multiple search terms to search for (OR logic). Use this to search for related terms in a single call. Example: ["1099", "W-2", "tax form", "tax return"] to find tax documents.'
+          ),
+        afterDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return emails received on or after this date. Use ISO format: "2025-01-01" or "2025-12-22T00:00:00Z"'
+          ),
+        beforeDate: z
+          .string()
+          .optional()
+          .describe(
+            'Only return emails received before this date. Use ISO format: "2025-02-01" or "2025-01-22T23:59:59Z"'
           ),
         maxResults: z
           .number()
@@ -20,11 +40,11 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
           .default(20)
           .describe('Maximum number of emails to return (default: 20)'),
       }),
-      execute: async ({ query, maxResults }) => {
-        console.log('[Gmail] gmail_search_emails called with:', { query, maxResults });
+      execute: async ({ query, queries, afterDate, beforeDate, maxResults }) => {
+        console.log(`[Gmail ${new Date().toISOString()}] gmail_search_emails called with:`, { query, queries, afterDate, beforeDate, maxResults });
 
         if (!client.hasCredentials()) {
-          console.log('[Gmail] No credentials configured');
+          console.log(`[Gmail ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Gmail not configured. Please add your email and app password in Settings → Connectors.',
@@ -32,9 +52,13 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         }
 
         try {
-          console.log('[Gmail] Calling client.searchEmails...');
-          const emails = await client.searchEmails(query, maxResults);
-          console.log('[Gmail] Search returned', emails.length, 'emails');
+          console.log(`[Gmail ${new Date().toISOString()}] Calling client.searchEmails...`);
+          const emails = await client.searchEmails(query || '', maxResults, {
+            afterDate,
+            beforeDate,
+            queries,
+          });
+          console.log(`[Gmail ${new Date().toISOString()}] Search returned ${emails.length} emails`);
           return {
             count: emails.length,
             emails: emails.map((email) => ({
@@ -79,18 +103,18 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
           ),
       }),
       execute: async ({ messageId }) => {
-        console.log('[Gmail] gmail_get_email called with messageId:', messageId);
+        console.log(`[Gmail ${new Date().toISOString()}] gmail_get_email called with messageId:`, messageId);
 
         // Validate that messageId is numeric (IMAP UID format)
         if (!/^\d+$/.test(messageId)) {
-          console.log('[Gmail] Invalid messageId format (not numeric):', messageId);
+          console.log(`[Gmail ${new Date().toISOString()}] Invalid messageId format (not numeric):`, messageId);
           return {
             error: `Invalid email ID format: "${messageId}". The messageId must be a numeric ID (e.g., "12345") as returned by gmail_search_emails. Please search for emails first to get valid IDs.`,
           };
         }
 
         if (!client.hasCredentials()) {
-          console.log('[Gmail] No credentials configured');
+          console.log(`[Gmail ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Gmail not configured. Please add your email and app password in Settings → Connectors.',
@@ -98,9 +122,9 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         }
 
         try {
-          console.log('[Gmail] Calling client.getEmail...');
+          console.log(`[Gmail ${new Date().toISOString()}] Calling client.getEmail...`);
           const email = await client.getEmail(messageId);
-          console.log('[Gmail] Got email:', {
+          console.log(`[Gmail ${new Date().toISOString()}] Got email:`, {
             id: email.id,
             subject: email.subject,
             bodyLength: email.body?.length,
@@ -149,10 +173,10 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         'List all mail folders and labels in Gmail (e.g., INBOX, Sent Mail, Drafts, custom labels). Returns the folder ID (use with gmail_get_folder_emails), name, total message count, and unread count for each folder.',
       inputSchema: z.object({}),
       execute: async () => {
-        console.log('[Gmail] gmail_list_labels called');
+        console.log(`[Gmail ${new Date().toISOString()}] gmail_list_labels called`);
 
         if (!client.hasCredentials()) {
-          console.log('[Gmail] No credentials configured');
+          console.log(`[Gmail ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Gmail not configured. Please add your email and app password in Settings → Connectors.',
@@ -160,9 +184,9 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         }
 
         try {
-          console.log('[Gmail] Calling client.listLabels...');
+          console.log(`[Gmail ${new Date().toISOString()}] Calling client.listLabels...`);
           const labels = await client.listLabels();
-          console.log('[Gmail] Found', labels.length, 'labels');
+          console.log(`[Gmail ${new Date().toISOString()}] Found ${labels.length} labels`);
           return {
             count: labels.length,
             labels: labels.map((label) => ({
@@ -208,10 +232,10 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
           .describe('Maximum number of emails to return (default: 20)'),
       }),
       execute: async ({ folderId, maxResults }) => {
-        console.log('[Gmail] gmail_get_folder_emails called with:', { folderId, maxResults });
+        console.log(`[Gmail ${new Date().toISOString()}] gmail_get_folder_emails called with:`, { folderId, maxResults });
 
         if (!client.hasCredentials()) {
-          console.log('[Gmail] No credentials configured');
+          console.log(`[Gmail ${new Date().toISOString()}] No credentials configured`);
           return {
             error:
               'Gmail not configured. Please add your email and app password in Settings → Connectors.',
@@ -219,9 +243,9 @@ export function createGmailTools(client: GmailImapClient): ToolSet {
         }
 
         try {
-          console.log('[Gmail] Calling client.getEmailsInFolder...');
+          console.log(`[Gmail ${new Date().toISOString()}] Calling client.getEmailsInFolder...`);
           const emails = await client.getEmailsInFolder(folderId, maxResults);
-          console.log('[Gmail] Found', emails.length, 'emails in folder');
+          console.log(`[Gmail ${new Date().toISOString()}] Found ${emails.length} emails in folder`);
           return {
             count: emails.length,
             emails: emails.map((email) => ({
