@@ -69,10 +69,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               <div className="whitespace-pre-wrap">{message.content}</div>
             ) : (
               <>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
+                {/* Show message content or a placeholder for tool-only messages */}
+                {message.content?.trim() ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
                       // Style code blocks
                       pre: ({ children }) => (
                         <pre className="bg-background/50 my-2 overflow-x-auto rounded-md p-3">
@@ -156,10 +158,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                         <td className="border-border border px-2 py-1">{children}</td>
                       ),
                     }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : message.toolCalls &&
+                  Array.isArray(message.toolCalls) &&
+                  message.toolCalls.length > 0 ? (
+                  <div className="text-muted-foreground italic">
+                    Used {message.toolCalls.length} tool{message.toolCalls.length > 1 ? 's' : ''} but
+                    did not generate a response. The tool limit may have been reached.
+                  </div>
+                ) : null}
                 {/* Show tool calls in a collapsible section */}
                 {message.toolCalls &&
                   Array.isArray(message.toolCalls) &&
