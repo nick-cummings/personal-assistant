@@ -4,7 +4,24 @@ import {
 import { db } from '@/lib/db';
 import type { ConnectorType } from '@/types';
 
-const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
+// Get today's date in a readable format
+function getTodayDate(): string {
+  const now = new Date();
+  return now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// Build the base system prompt with current date
+function getBaseSystemPrompt(): string {
+  return `You are a helpful AI assistant with access to the user's development and work tools. Based on configured connectors, you can help with code repositories, project management, documentation, cloud infrastructure, emails, calendars, and file storage.
+
+## Current Date
+
+Today is ${getTodayDate()}. Use this date when interpreting relative time references like "last 30 days", "this week", "yesterday", etc. When filtering by date, calculate the actual date range based on today's date.
 
 ## Guidelines
 
@@ -23,6 +40,7 @@ const BASE_SYSTEM_PROMPT = `You are a helpful AI assistant with access to the us
 6. **Cross-reference when helpful** — If a Jira ticket mentions a PR, or a deployment relates to a GitHub commit, connect the dots.
 
 7. **Be concise but thorough** — Default to concise answers, but be comprehensive when the user asks for details.`;
+}
 
 export async function buildSystemPrompt(): Promise<string> {
   const [settings, userContext, enabledConnectors] = await Promise.all([
@@ -31,7 +49,7 @@ export async function buildSystemPrompt(): Promise<string> {
     getEnabledConnectors(), // This checks both DB and environment variables
   ]);
 
-  const parts: string[] = [BASE_SYSTEM_PROMPT];
+  const parts: string[] = [getBaseSystemPrompt()];
 
   // Add user context if available
   if (userContext?.content) {
