@@ -104,6 +104,10 @@ export function useChat(id: string | null) {
     queryKey: [...CHATS_KEY, id],
     queryFn: () => fetchChat(id!),
     enabled: !!id,
+    // Always refetch when navigating to a chat to ensure we have the latest messages
+    // This handles the case where a stream completed while viewing a different chat
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 }
 
