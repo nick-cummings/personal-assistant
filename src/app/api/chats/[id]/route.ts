@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import type { CreateMessageRequest, UpdateChatRequest } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
-import type { Prisma } from '../../../../generated/prisma';
+import type { Prisma } from '../../../../generated/prisma/client';
 
 type RouteParams = { params: Promise<{ id: string }> };
 

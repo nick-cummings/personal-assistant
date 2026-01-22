@@ -1,4 +1,4 @@
-import type { Chat, Connector, Folder, Message, Settings, UserContext } from '../generated/prisma';
+import type { Chat, Connector, Folder, Message, Settings, UserContext } from '../generated/prisma/client';
 
 // Re-export Prisma types for convenience
 export type { Folder, Chat, Message, Connector, Settings, UserContext };
