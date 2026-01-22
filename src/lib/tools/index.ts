@@ -1,9 +1,9 @@
 // Generic tools that are always available (not tied to specific connectors)
 
-import { tool } from 'ai';
 import type { ToolSet } from '../connectors/types';
 import { createCalculatorTool } from './calculator';
 import { createDateTimeTool } from './datetime';
+import { createNpmTool } from './npm';
 import { createWeatherTool } from './weather';
 import { createWebFetchTool } from './web-fetch';
 import { createWebSearchTool } from './web-search';
@@ -23,6 +23,7 @@ export function createGenericTools(config: GenericToolsConfig = {}): ToolSet {
   Object.assign(tools, createDateTimeTool());
   Object.assign(tools, createCalculatorTool());
   Object.assign(tools, createWebFetchTool());
+  Object.assign(tools, createNpmTool());
 
   // Conditionally available tools (require API keys)
   if (config.serpApiKey) {
@@ -39,6 +40,7 @@ export function createGenericTools(config: GenericToolsConfig = {}): ToolSet {
 // Re-export individual tool creators for testing
 export { createCalculatorTool } from './calculator';
 export { createDateTimeTool } from './datetime';
+export { createNpmTool } from './npm';
 export { createWeatherTool } from './weather';
 export { createWebFetchTool } from './web-fetch';
 export { createWebSearchTool } from './web-search';

@@ -134,6 +134,7 @@ export async function buildSystemPrompt(): Promise<string> {
   genericToolsList.push('- **calculator** — Evaluate math expressions and convert units');
   genericToolsList.push('- **datetime** — Get current time, convert timezones, calculate date differences');
   genericToolsList.push('- **web_fetch** — Read content from any URL (articles, documentation, web pages)');
+  genericToolsList.push('- **npm** — Search npm packages, get package info, find GitHub repos for JS/TS libraries');
 
   if (hasSerpApiKey) {
     genericToolsList.push('- **web_search** — Search the web for current information');
