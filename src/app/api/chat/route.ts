@@ -2,6 +2,7 @@ import { getModel } from '@/lib/ai/client';
 import { buildSystemPrompt, generateTitlePrompt } from '@/lib/ai/prompts';
 import { getAllConnectorTools } from '@/lib/connectors';
 import { db } from '@/lib/db';
+import { createGenericTools } from '@/lib/tools';
 import { generateText, stepCountIs, streamText, type ModelMessage } from 'ai';
 import { NextRequest } from 'next/server';
 
@@ -78,8 +79,18 @@ export async function POST(request: NextRequest) {
 
     // Get connector tools
     const connectorTools = await getAllConnectorTools();
-    const hasTools = Object.keys(connectorTools).length > 0;
-    const tools = hasTools ? connectorTools : undefined;
+
+    // Get generic tools (always available)
+    // Check both database settings and environment variables for API keys
+    const genericTools = createGenericTools({
+      serpApiKey: settings?.serpApiKey || process.env.SERP_API_KEY || undefined,
+      openWeatherApiKey: settings?.openWeatherApiKey || process.env.OPEN_WEATHER_API_KEY || undefined,
+    });
+
+    // Combine all tools
+    const allTools = { ...connectorTools, ...genericTools };
+    const hasTools = Object.keys(allTools).length > 0;
+    const tools = hasTools ? allTools : undefined;
 
     // Check if this is the first user message (for title generation)
     const isFirstMessage = chat.messages.filter((m) => m.role === 'user').length === 0;
